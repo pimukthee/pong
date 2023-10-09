@@ -24,21 +24,21 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type Client struct {
+type Player struct {
 	room *Room
 	conn *websocket.Conn
 	send chan []byte
 }
 
-func (c *Client) readPump() {
+func (p *Player) readPump() {
 	defer func() {
-		c.room.leave <- c
-		c.conn.Close()
+		p.room.leave <- p
+		p.conn.Close()
 	}()
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	p.conn.SetReadDeadline(time.Now().Add(pongWait))
+	p.conn.SetPongHandler(func(string) error { p.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := p.conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -47,42 +47,42 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.room.broadcast <- message
+		p.room.broadcast <- message
 	}
 }
 
-func (c *Client) writePump() {
+func (p *Player) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		p.conn.Close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case message, ok := <-p.send:
 			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				p.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := p.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
-			n := len(c.send)
+			n := len(p.send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(<-p.send)
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := p.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}

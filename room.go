@@ -13,10 +13,10 @@ type roomID string
 type Room struct {
 	id        roomID
 	status    int
-	clients   map[*Client]bool
+	players   map[*Player]bool
 	broadcast chan []byte
-	join      chan *Client
-	leave     chan *Client
+	join      chan *Player
+	leave     chan *Player
 }
 
 func newRoom() Room {
@@ -24,9 +24,9 @@ func newRoom() Room {
 		id:        roomID(uuid.NewString()),
 		status:    Waiting,
 		broadcast: make(chan []byte),
-		join:      make(chan *Client),
-		leave:     make(chan *Client),
-		clients:   make(map[*Client]bool),
+		join:      make(chan *Player),
+		leave:     make(chan *Player),
+		players:   make(map[*Player]bool),
 	}
 }
 
@@ -34,19 +34,19 @@ func (r *Room) run() {
 	for {
 		select {
 		case client := <-r.join:
-			r.clients[client] = true
+			r.players[client] = true
 		case client := <-r.leave:
-			if _, ok := r.clients[client]; ok {
-				delete(r.clients, client)
+			if _, ok := r.players[client]; ok {
+				delete(r.players, client)
 				close(client.send)
 			}
 		case message := <-r.broadcast:
-			for client := range r.clients {
+			for client := range r.players {
 				select {
 				case client.send <- message:
 				default:
 					close(client.send)
-					delete(r.clients, client)
+					delete(r.players, client)
 				}
 			}
 		}

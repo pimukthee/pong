@@ -57,11 +57,11 @@ func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
     return
   }
 
-	client := &Client{room: &room, conn: conn, send: make(chan []byte)}
-	client.room.join <- client
+	player := &Player{room: &room, conn: conn, send: make(chan []byte)}
+	player.room.join <- player
 
-	go client.writePump()
-	go client.readPump()
+	go player.writePump()
+	go player.readPump()
 }
 
 func newHandler(rooms *Rooms) *http.ServeMux {
