@@ -6,13 +6,13 @@ import (
 )
 
 type Rooms struct {
-	rooms     map[roomID]Room
+	rooms     map[roomID]*Room
 	available []roomID
 }
 
 func main() {
   rooms := Rooms {
-    rooms: make(map[roomID]Room),
+    rooms: make(map[roomID]*Room),
   }
 	handler := newHandler(&rooms)
 	server := http.Server{

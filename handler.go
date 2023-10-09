@@ -21,9 +21,8 @@ func createRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	room := newRoom()
-	rooms.rooms[room.id] = room
-	rooms.available = append(rooms.available, room.id)
-
+	rooms.rooms[room.id] = &room
+  go room.run()
 	newUrl := fmt.Sprintf("/rooms/%s", room.id)
 
 	http.Redirect(w, r, newUrl, http.StatusSeeOther)
@@ -40,7 +39,11 @@ func serveRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Room not found", http.StatusNotFound)
     return
   }
-  go room.run()
+  log.Println(room.status)
+  if !room.IsWaiting() {
+    http.Error(w, "Room is not available", http.StatusBadRequest)
+    return
+  }
 	http.ServeFile(w, r, "template/room.html")
 }
 
@@ -50,6 +53,7 @@ func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+
   roomID := roomID(path.Base(r.URL.Path))
   room, ok := rooms.rooms[roomID]
   if !ok {
@@ -57,7 +61,12 @@ func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
     return
   }
 
-	player := &Player{room: &room, conn: conn, send: make(chan []byte)}
+  if !room.IsWaiting() {
+    log.Println("room is not available")
+    return
+  }
+
+	player := &Player{room: room, conn: conn, send: make(chan []byte)}
 	player.room.join <- player
 
 	go player.writePump()

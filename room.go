@@ -1,11 +1,17 @@
 package main
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 const (
-	None = iota
-	Waiting
-	Start
+	none = iota
+	waiting
+	ready
+	start
+	finish
 )
 
 type roomID string
@@ -13,7 +19,7 @@ type roomID string
 type Room struct {
 	id        roomID
 	status    int
-	players   map[*Player]bool
+	players   [2]*Player
 	broadcast chan []byte
 	join      chan *Player
 	leave     chan *Player
@@ -22,33 +28,58 @@ type Room struct {
 func newRoom() Room {
 	return Room{
 		id:        roomID(uuid.NewString()),
-		status:    Waiting,
+		status:    waiting,
 		broadcast: make(chan []byte),
 		join:      make(chan *Player),
 		leave:     make(chan *Player),
-		players:   make(map[*Player]bool),
 	}
+}
+
+func (r *Room) IsWaiting() bool {
+	return r.status == waiting
 }
 
 func (r *Room) run() {
 	for {
 		select {
-		case client := <-r.join:
-			r.players[client] = true
-		case client := <-r.leave:
-			if _, ok := r.players[client]; ok {
-				delete(r.players, client)
-				close(client.send)
-			}
+		case player := <-r.join:
+			r.addPlayer(player)
+		case player := <-r.leave:
+			r.removePlayer(player)
+			close(player.send)
 		case message := <-r.broadcast:
-			for client := range r.players {
+			for i, player := range r.players {
 				select {
-				case client.send <- message:
+				case player.send <- message:
 				default:
-					close(client.send)
-					delete(r.players, client)
+					close(player.send)
+					r.players[i] = nil
 				}
 			}
 		}
+	}
+}
+
+func (r *Room) addPlayer(p *Player) {
+	if r.players[0] == nil {
+		r.players[0] = p
+		return
+	}
+	if r.players[1] == nil {
+		r.players[1] = p
+		r.status = ready
+	}
+}
+
+func (r *Room) removePlayer(p *Player) {
+	if p == r.players[0] {
+		r.players[0] = nil
+	} else {
+		r.players[1] = nil
+	}
+	if r.status == ready {
+		r.status = waiting
+	} else if r.status == start {
+		r.status = finish
 	}
 }
