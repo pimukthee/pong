@@ -22,16 +22,12 @@ type Room struct {
 func newRoom() Room {
 	return Room{
 		id:        roomID(uuid.NewString()),
-		status:    Start,
+		status:    Waiting,
 		broadcast: make(chan []byte),
 		join:      make(chan *Client),
 		leave:     make(chan *Client),
 		clients:   make(map[*Client]bool),
 	}
-}
-
-func (r *Room) exist() bool {
-	return r.status != None
 }
 
 func (r *Room) run() {

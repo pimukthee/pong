@@ -35,21 +35,28 @@ func serveRoom(rooms Rooms, w http.ResponseWriter, r *http.Request) {
 		return
 	}
   roomID := roomID(path.Base(r.URL.Path))
-  if _, ok := rooms.rooms[roomID]; !ok {
-    http.Error(w, "Room not found", http.StatusNotFound)
+  room, ok := rooms.rooms[roomID]
+  if !ok {
+		http.Error(w, "Room not found", http.StatusNotFound)
     return
   }
-
+  go room.run()
 	http.ServeFile(w, r, "template/room.html")
 }
 
-func serveWs(w http.ResponseWriter, r *http.Request) {
+func serveWs(rooms Rooms, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	room := newRoom()
+  roomID := roomID(path.Base(r.URL.Path))
+  room, ok := rooms.rooms[roomID]
+  if !ok {
+    log.Println("room not found")
+    return
+  }
+
 	client := &Client{room: &room, conn: conn, send: make(chan []byte)}
 	client.room.join <- client
 
@@ -66,8 +73,8 @@ func newHandler(rooms Rooms) *http.ServeMux {
 	handler.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
 		serveRoom(rooms, w, r)
 	})
-	handler.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(w, r)
+	handler.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(rooms, w, r)
 	})
 	return handler
 }

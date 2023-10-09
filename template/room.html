@@ -17,8 +17,23 @@
           }
         }
 
+        document.getElementById("form").onsubmit = function (e) {
+          if (!conn) {
+            console.log("failed");
+            return false;
+          }
+          if (!msg.value) {
+            return false;
+          }
+          conn.send(msg.value)
+          msg.value = ""
+          return false
+        }
+
         if (window["WebSocket"]) {
-          conn = new WebSocket("ws://" + document.location.host + "/ws");
+          pathnames = window.location.pathname.split("/")
+          roomId = pathnames.pop() || pathnames.pop()
+          conn = new WebSocket("ws://" + document.location.host + "/ws/" + roomId);
           conn.onclose = function (evt) {
             var item = document.createElement("div");
             item.innerHTML = "<b>Connection closed.</b>";
