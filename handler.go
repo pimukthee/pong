@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
 	http.ServeFile(w, r, "template/index.html")
 }
 
@@ -20,9 +22,13 @@ func createRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
 	room := newRoom()
 	rooms.rooms[room.id] = &room
-  go room.run()
+
+	c := context.WithValue(context.Background(), "rooms", rooms.rooms)
+	go room.run(c)
+
 	newUrl := fmt.Sprintf("/rooms/%s", room.id)
 
 	http.Redirect(w, r, newUrl, http.StatusSeeOther)
@@ -33,17 +39,19 @@ func serveRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-  roomID := roomID(path.Base(r.URL.Path))
-  room, ok := rooms.rooms[roomID]
-  if !ok {
+
+	roomID := roomID(path.Base(r.URL.Path))
+	room, ok := rooms.rooms[roomID]
+	if !ok {
 		http.Error(w, "Room not found", http.StatusNotFound)
-    return
-  }
-  log.Println(room.status)
-  if !room.IsWaiting() {
-    http.Error(w, "Room is not available", http.StatusBadRequest)
-    return
-  }
+		return
+	}
+
+	if !room.IsWaiting() {
+		http.Error(w, "Room is not available", http.StatusBadRequest)
+		return
+	}
+
 	http.ServeFile(w, r, "template/room.html")
 }
 
@@ -54,17 +62,17 @@ func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  roomID := roomID(path.Base(r.URL.Path))
-  room, ok := rooms.rooms[roomID]
-  if !ok {
-    log.Println("room not found")
-    return
-  }
+	roomID := roomID(path.Base(r.URL.Path))
+	room, ok := rooms.rooms[roomID]
+	if !ok {
+		log.Println("room not found")
+		return
+	}
 
-  if !room.IsWaiting() {
-    log.Println("room is not available")
-    return
-  }
+	if !room.IsWaiting() {
+		log.Println("room is not available")
+		return
+	}
 
 	player := &Player{room: room, conn: conn, send: make(chan []byte)}
 	player.room.join <- player
@@ -75,6 +83,7 @@ func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 
 func newHandler(rooms *Rooms) *http.ServeMux {
 	handler := http.NewServeMux()
+
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
 		createRoom(rooms, w, r)
@@ -85,5 +94,6 @@ func newHandler(rooms *Rooms) *http.ServeMux {
 	handler.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(rooms, w, r)
 	})
+
 	return handler
 }

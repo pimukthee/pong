@@ -11,9 +11,10 @@ type Rooms struct {
 }
 
 func main() {
-  rooms := Rooms {
-    rooms: make(map[roomID]*Room),
-  }
+	rooms := Rooms{
+		rooms: make(map[roomID]*Room),
+	}
+
 	handler := newHandler(&rooms)
 	server := http.Server{
 		Addr:    ":8080",
