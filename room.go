@@ -1,27 +1,27 @@
 package main
 
 type Room struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
+	clients   map[*Client]bool
+	broadcast chan []byte
+	join      chan *Client
+	leave     chan *Client
 }
 
 func newRoom() Room {
 	return Room{
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		broadcast: make(chan []byte),
+		join:      make(chan *Client),
+		leave:     make(chan *Client),
+		clients:   make(map[*Client]bool),
 	}
 }
 
 func (r *Room) run() {
 	for {
 		select {
-		case client := <-r.register:
+		case client := <-r.join:
 			r.clients[client] = true
-		case client := <-r.unregister:
+		case client := <-r.leave:
 			if _, ok := r.clients[client]; ok {
 				delete(r.clients, client)
 				close(client.send)

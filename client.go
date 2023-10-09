@@ -33,7 +33,7 @@ type Client struct {
 
 func (c *Client) readPump() {
 	defer func() {
-		c.room.unregister <- c
+		c.room.leave <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
