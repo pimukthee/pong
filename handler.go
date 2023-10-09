@@ -13,24 +13,24 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "home.html")
 }
 
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func serveWs(room *Room, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte)}
-	client.hub.register <- client
+	client := &Client{room: room, conn: conn, send: make(chan []byte)}
+	client.room.register <- client
 
 	go client.writePump()
 	go client.readPump()
 }
 
-func newHandler(hub *Hub) *http.ServeMux {
+func newHandler(room *Room) *http.ServeMux {
 	handler := http.NewServeMux()
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(room, w, r)
 	})
 	return handler
 }

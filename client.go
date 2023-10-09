@@ -26,14 +26,14 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	hub  *Hub
+	room  *Room
 	conn *websocket.Conn
 	send chan []byte
 }
 
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.room.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -49,7 +49,7 @@ func (c *Client) readPump() {
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		fmt.Println(message)
-		c.hub.broadcast <- message
+		c.room.broadcast <- message
 	}
 }
 
