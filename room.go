@@ -1,6 +1,9 @@
 package main
 
+import "github.com/google/uuid"
+
 type Room struct {
+	id        string
 	clients   map[*Client]bool
 	broadcast chan []byte
 	join      chan *Client
@@ -9,6 +12,7 @@ type Room struct {
 
 func newRoom() Room {
 	return Room{
+		id:        uuid.NewString(),
 		broadcast: make(chan []byte),
 		join:      make(chan *Client),
 		leave:     make(chan *Client),

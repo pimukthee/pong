@@ -19,6 +19,7 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	room := newRoom()
 	client := &Client{room: room, conn: conn, send: make(chan []byte)}
 	client.room.join <- client
 

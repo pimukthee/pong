@@ -26,7 +26,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	room  *Room
+	room *Room
 	conn *websocket.Conn
 	send chan []byte
 }

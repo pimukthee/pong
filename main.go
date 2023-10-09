@@ -6,9 +6,7 @@ import (
 )
 
 func main() {
-	room := newRoom()
-	handler := newHandler(&room)
-	go room.run()
+	handler := newHandler()
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: handler,
