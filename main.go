@@ -5,8 +5,16 @@ import (
 	"net/http"
 )
 
+type Rooms struct {
+	rooms     map[roomID]Room
+	available []roomID
+}
+
 func main() {
-	handler := newHandler()
+  rooms := Rooms {
+    rooms: make(map[roomID]Room),
+  }
+	handler := newHandler(rooms)
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: handler,

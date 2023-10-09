@@ -2,8 +2,17 @@ package main
 
 import "github.com/google/uuid"
 
+const (
+	None = iota
+	Waiting
+	Start
+)
+
+type roomID string
+
 type Room struct {
-	id        string
+	id        roomID
+	status    int
 	clients   map[*Client]bool
 	broadcast chan []byte
 	join      chan *Client
@@ -12,12 +21,17 @@ type Room struct {
 
 func newRoom() Room {
 	return Room{
-		id:        uuid.NewString(),
+		id:        roomID(uuid.NewString()),
+		status:    Start,
 		broadcast: make(chan []byte),
 		join:      make(chan *Client),
 		leave:     make(chan *Client),
 		clients:   make(map[*Client]bool),
 	}
+}
+
+func (r *Room) exist() bool {
+	return r.status != None
 }
 
 func (r *Room) run() {
