@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"bytes"
@@ -19,26 +19,21 @@ var (
 	space   = []byte{' '}
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 type Player struct {
-	room *Room
-	conn *websocket.Conn
-	send chan []byte
+	Room *Room
+	Conn *websocket.Conn
+	Send chan []byte
 }
 
-func (p *Player) readPump() {
+func (p *Player) ReadPump() {
 	defer func() {
-		p.room.leave <- p
-		p.conn.Close()
+		p.Room.Leave <- p
+		p.Conn.Close()
 	}()
-	p.conn.SetReadDeadline(time.Now().Add(pongWait))
-	p.conn.SetPongHandler(func(string) error { p.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	p.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	p.Conn.SetPongHandler(func(string) error { p.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := p.conn.ReadMessage()
+		_, message, err := p.Conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -47,42 +42,42 @@ func (p *Player) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		p.room.broadcast <- message
+		p.Room.Broadcast <- message
 	}
 }
 
-func (p *Player) writePump() {
+func (p *Player) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		p.conn.Close()
+		p.Conn.Close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-p.send:
+		case message, ok := <-p.Send:
 			if !ok {
-				p.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				p.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := p.conn.NextWriter(websocket.TextMessage)
+			w, err := p.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
-			n := len(p.send)
+			n := len(p.Send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-p.send)
+				w.Write(<-p.Send)
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			p.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := p.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			p.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := p.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}

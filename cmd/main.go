@@ -3,19 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+	"pong/internal/api"
+	"pong/internal/game"
 )
 
-type Rooms struct {
-	rooms     map[roomID]*Room
-	available []roomID
-}
-
 func main() {
-	rooms := Rooms{
-		rooms: make(map[roomID]*Room),
-	}
+  game := game.NewGame() 
+	handler := api.NewHandler(game)
 
-	handler := newHandler(&rooms)
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: handler,
