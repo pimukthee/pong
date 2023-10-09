@@ -14,7 +14,7 @@ func main() {
   rooms := Rooms {
     rooms: make(map[roomID]Room),
   }
-	handler := newHandler(rooms)
+	handler := newHandler(&rooms)
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: handler,

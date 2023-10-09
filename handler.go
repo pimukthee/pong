@@ -15,7 +15,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "template/index.html")
 }
 
-func createRoom(rooms Rooms, w http.ResponseWriter, r *http.Request) {
+func createRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -29,7 +29,7 @@ func createRoom(rooms Rooms, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, newUrl, http.StatusSeeOther)
 }
 
-func serveRoom(rooms Rooms, w http.ResponseWriter, r *http.Request) {
+func serveRoom(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -44,7 +44,7 @@ func serveRoom(rooms Rooms, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "template/room.html")
 }
 
-func serveWs(rooms Rooms, w http.ResponseWriter, r *http.Request) {
+func serveWs(rooms *Rooms, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -64,7 +64,7 @@ func serveWs(rooms Rooms, w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
-func newHandler(rooms Rooms) *http.ServeMux {
+func newHandler(rooms *Rooms) *http.ServeMux {
 	handler := http.NewServeMux()
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
