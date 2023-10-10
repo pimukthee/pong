@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Pong</title>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas width="750" height="585" id="game"></canvas>
+    <script>
+      var conn;
+      if (window["WebSocket"]) {
+        pathnames = window.location.pathname.split("/");
+        roomId = pathnames.pop() || pathnames.pop();
+        conn = new WebSocket(
+          "ws://" + document.location.host + "/ws/" + roomId,
+        );
+        conn.onclose = function (evt) {
+          console.log("player left");
+        };
+        conn.onmessage = function (evt) {
+          console.log(evt.data);
+        };
+      } else {
+        alert("Your browser does not support WebSockets.");
+      }
+      const canvas = document.getElementById("game");
+      const context = canvas.getContext("2d");
+      const grid = 15;
+      const paddleHeight = grid * 5;
+      const maxPaddleY = canvas.height - grid - paddleHeight;
+      const Arrows = {
+        Up: 38,
+        Down: 40,
+      }
+      var paddleSpeed = 6;
+      var ballSpeed = 5;
+
+      const leftPaddle = {
+        x: grid * 2,
+        y: canvas.height / 2 - paddleHeight / 2,
+        width: grid,
+        height: paddleHeight,
+        dy: 0,
+      };
+      function draw() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        leftPaddle.y += leftPaddle.dy;
+
+        context.fillStyle = "white";
+        context.fillRect(
+          leftPaddle.x,
+          leftPaddle.y,
+          leftPaddle.width,
+          leftPaddle.height,
+        );
+        context.fillstyle = "lightgrey";
+        context.fillRect(0, 0, canvas.width, grid);
+        context.fillRect(0, canvas.height - grid, canvas.width, canvas.height);
+
+        for (let i = grid; i < canvas.height - grid; i += grid * 2) {
+          context.fillRect(canvas.width / 2 - grid / 2, i, grid, grid);
+        }
+        requestAnimationFrame(draw);
+      }
+      document.addEventListener("keydown", function (e) {
+        if (e.which === Arrows.Up) {
+            leftPaddle.dy = -paddleSpeed;
+        } else if (e.which == Arrows.Down) {
+            leftPaddle.dy = paddleSpeed;
+        }
+      });
+      document.addEventListener("keyup", function (e) {
+        if (e.which === Arrows.Up) {
+          leftPaddle.dy = 0;
+        } else if (e.which == Arrows.Down) {
+          leftPaddle.dy = 0;
+        }
+      });
+      draw();
+    </script>
+  </body>
+</html>
