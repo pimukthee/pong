@@ -46,19 +46,23 @@
         Up: 38,
         Down: 40,
       }
-      var paddleSpeed = 6;
+      const acceleration = 3;
+      var maxSpeed = 6;
       var ballSpeed = 5;
-
+      
       const leftPaddle = {
         x: grid * 2,
         y: canvas.height / 2 - paddleHeight / 2,
         width: grid,
         height: paddleHeight,
+        acceleratingUp: false,
+        acceleratingDown: false,
         dy: 0,
       };
       function draw() {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
+        updatePaddleDirection();
         leftPaddle.y += leftPaddle.dy;
 
         context.fillStyle = "white";
@@ -79,18 +83,34 @@
       }
       document.addEventListener("keydown", function (e) {
         if (e.which === Arrows.Up) {
-            leftPaddle.dy = -paddleSpeed;
-        } else if (e.which == Arrows.Down) {
-            leftPaddle.dy = paddleSpeed;
+            leftPaddle.acceleratingUp = true;
+         } else if (e.which == Arrows.Down) {
+            leftPaddle.acceleratingDown = true;
         }
+        // conn.send(leftPaddle.dy)
       });
+
       document.addEventListener("keyup", function (e) {
-        if (e.which === Arrows.Up) {
-          leftPaddle.dy = 0;
+        if (e.which == Arrows.Up) {
+          leftPaddle.acceleratingUp = false;
         } else if (e.which == Arrows.Down) {
-          leftPaddle.dy = 0;
+          leftPaddle.acceleratingDown = false;
         }
-      });
+      })
+
+      function updatePaddleDirection() {
+        if (leftPaddle.acceleratingUp && !leftPaddle.acceleratingDown) {
+          leftPaddle.dy = Math.max(-maxSpeed, leftPaddle.dy - acceleration)
+        } else if (leftPaddle.acceleratingDown && !leftPaddle.acceleratingUp) {
+          leftPaddle.dy = Math.min(maxSpeed, leftPaddle.dy + acceleration)
+        } else {
+          if (leftPaddle.dy > 0) {
+            leftPaddle.dy -= acceleration
+          } else if (leftPaddle.dy < 0) {
+            leftPaddle.dy += acceleration
+          }
+        }
+      }
       draw();
     </script>
   </body>
