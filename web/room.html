@@ -45,11 +45,11 @@
       const Arrows = {
         Up: 38,
         Down: 40,
-      }
+      };
       const acceleration = 3;
-      var maxSpeed = 6;
-      var ballSpeed = 5;
-      
+      const maxSpeed = 6;
+      const ballSpeed = 5;
+
       const leftPaddle = {
         x: grid * 2,
         y: canvas.height / 2 - paddleHeight / 2,
@@ -59,10 +59,20 @@
         acceleratingDown: false,
         dy: 0,
       };
+      const rightPaddle = {
+        x: canvas.width - grid * 3,
+        y: canvas.height / 2 - paddleHeight / 2,
+        width: grid,
+        height: paddleHeight,
+        acceleratingUp: false,
+        acceleratingDown: false,
+        dy: 0,
+      };
+
       function draw() {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        updatePaddleDirection();
+        updateLeftPaddleSpeed();
         leftPaddle.y += leftPaddle.dy;
 
         context.fillStyle = "white";
@@ -72,6 +82,13 @@
           leftPaddle.width,
           leftPaddle.height,
         );
+        context.fillRect(
+          rightPaddle.x,
+          rightPaddle.y,
+          rightPaddle.width,
+          rightPaddle.height,
+        );
+
         context.fillstyle = "lightgrey";
         context.fillRect(0, 0, canvas.width, grid);
         context.fillRect(0, canvas.height - grid, canvas.width, canvas.height);
@@ -81,35 +98,54 @@
         }
         requestAnimationFrame(draw);
       }
+
       document.addEventListener("keydown", function (e) {
         if (e.which === Arrows.Up) {
-            leftPaddle.acceleratingUp = true;
-         } else if (e.which == Arrows.Down) {
-            leftPaddle.acceleratingDown = true;
+          if (!leftPaddle.acceleratingUp) {
+            sendAction();
+          }
+          leftPaddle.acceleratingUp = true;
+        } else if (e.which == Arrows.Down) {
+          if (!leftPaddle.acceleratingDown) {
+            sendAction();
+          }
+          leftPaddle.acceleratingDown = true;
         }
-        // conn.send(leftPaddle.dy)
       });
 
       document.addEventListener("keyup", function (e) {
         if (e.which == Arrows.Up) {
+          if (leftPaddle.acceleratingUp) {
+            sendAction();
+          }
           leftPaddle.acceleratingUp = false;
         } else if (e.which == Arrows.Down) {
+          if (leftPaddle.acceleratingDown) {
+            sendAction();
+          }
           leftPaddle.acceleratingDown = false;
         }
-      })
+      });
 
-      function updatePaddleDirection() {
+      function updateLeftPaddleSpeed() {
         if (leftPaddle.acceleratingUp && !leftPaddle.acceleratingDown) {
-          leftPaddle.dy = Math.max(-maxSpeed, leftPaddle.dy - acceleration)
+          leftPaddle.dy = Math.max(-maxSpeed, leftPaddle.dy - acceleration);
         } else if (leftPaddle.acceleratingDown && !leftPaddle.acceleratingUp) {
-          leftPaddle.dy = Math.min(maxSpeed, leftPaddle.dy + acceleration)
-        } else {
+          leftPaddle.dy = Math.min(maxSpeed, leftPaddle.dy + acceleration);
+        } else if (!leftPaddle.acceleratingUp && !leftPaddle.acceleratingDown) {
           if (leftPaddle.dy > 0) {
-            leftPaddle.dy -= acceleration
+            leftPaddle.dy -= acceleration;
           } else if (leftPaddle.dy < 0) {
-            leftPaddle.dy += acceleration
+            leftPaddle.dy += acceleration;
           }
         }
+      }
+
+      function sendAction() {
+        conn.send(JSON.stringify({
+          up: leftPaddle.acceleratingUp,
+          down: leftPaddle.acceleratingDown
+        }))
       }
       draw();
     </script>

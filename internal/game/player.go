@@ -1,7 +1,7 @@
 package game
 
 import (
-	"bytes"
+	"fmt"
 	"log"
 	"time"
 
@@ -14,15 +14,21 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
+const accelertion = 3
+const maxSpeed = 6
+
+type Action struct {
+	Up   bool `json:"up"`
+	Down bool `json:"down"`
+}
 
 type Player struct {
-	Room *Room
-	Conn *websocket.Conn
-	Send chan []byte
+	Room  *Room
+	Conn  *websocket.Conn
+	Send  chan []byte
+	State Action
+	Y     int
+	Dy    int
 }
 
 func (p *Player) ReadPump() {
@@ -30,10 +36,12 @@ func (p *Player) ReadPump() {
 		p.Room.Leave <- p
 		p.Conn.Close()
 	}()
+
 	p.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	p.Conn.SetPongHandler(func(string) error { p.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
-		_, message, err := p.Conn.ReadMessage()
+		err := p.Conn.ReadJSON(&p.State)
 		if err != nil {
 			log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -41,8 +49,9 @@ func (p *Player) ReadPump() {
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		p.Room.Broadcast <- message
+		fmt.Println(p.State)
+		// message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		// p.Room.Broadcast <- message
 	}
 }
 
@@ -55,7 +64,7 @@ func (p *Player) WritePump() {
 
 	for {
 		select {
-		case message, ok := <-p.Send:
+		case _, ok := <-p.Send:
 			if !ok {
 				p.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -64,12 +73,6 @@ func (p *Player) WritePump() {
 			w, err := p.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
-			}
-			w.Write(message)
-			n := len(p.Send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-p.Send)
 			}
 
 			if err := w.Close(); err != nil {
@@ -82,4 +85,12 @@ func (p *Player) WritePump() {
 			}
 		}
 	}
+}
+
+func (p *Player) updatePosition() {
+
+}
+
+func (p *Player) updateSpeed() {
+
 }
