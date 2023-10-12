@@ -41,8 +41,8 @@
             id = evt.data;
           } else {
             action = JSON.parse(evt.data);
-            // leftPaddle.dy = action.player1.dy
-            // leftPaddle.y = action.player1.y
+            leftPaddle.dy = action.player1.dy
+            leftPaddle.y = action.player1.y
             rightPaddle.y = leftPaddle.y
           }
         };
@@ -62,6 +62,14 @@
       const maxSpeed = 6;
       const ballSpeed = 5;
 
+      const ball = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        dx: -ballSpeed,
+        dy: 0,
+        width: grid,
+        height: grid,
+      }
       const leftPaddle = {
         x: grid * 2,
         y: canvas.height / 2 - paddleHeight / 2, // top of the paddle
@@ -86,9 +94,9 @@
 
         updateLeftPaddleSpeed();
         leftPaddle.y = movePaddle();
-        console.log(leftPaddle.y)
 
         context.fillStyle = "white";
+        context.fillRect(ball.x, ball.y, ball.width, ball.height)
         context.fillRect(
           leftPaddle.x,
           leftPaddle.y,
