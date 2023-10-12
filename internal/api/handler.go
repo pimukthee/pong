@@ -15,7 +15,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, "template/index.html")
+	http.ServeFile(w, r, "web/index.html")
 }
 
 func createRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func serveRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, "template/room.html")
+	http.ServeFile(w, r, "web/room.html")
 }
 
 func NewHandler(game *game.Game) *http.ServeMux {
@@ -66,7 +66,7 @@ func NewHandler(game *game.Game) *http.ServeMux {
 		serveRoom(game, w, r)
 	})
 	handler.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) {
-    websocket.ServeWs(game, w, r)
+		websocket.ServeWs(game, w, r)
 	})
 
 	return handler

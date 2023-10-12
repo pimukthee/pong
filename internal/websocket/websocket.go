@@ -33,9 +33,11 @@ func ServeWs(g *game.Game, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player := &game.Player{Room: room, Conn: conn, Send: make(chan []byte)}
+	player := game.NewPlayer(room, conn)
 	player.Room.Join <- player
+	// send player id back to the client
+	conn.WriteMessage(websocket.TextMessage, []byte(player.ID))
 
 	go player.WritePump()
-	go player.ReadPump()
+	go player.ReadAction()
 }

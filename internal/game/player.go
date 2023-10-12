@@ -1,10 +1,10 @@
 package game
 
 import (
-	"bytes"
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,26 +14,63 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
+const acceleration = 3
+const maxSpeed = 6
 
-type Player struct {
-	Room *Room
-	Conn *websocket.Conn
-	Send chan []byte
+type Action struct {
+	Up   bool `json:"up"`
+	Down bool `json:"down"`
 }
 
-func (p *Player) ReadPump() {
+type PlayerID string
+
+type Player struct {
+	ID     PlayerID
+	Room   *Room
+	Conn   *websocket.Conn
+	Send   chan gameState
+	action Action
+	Y      int
+	Dy     int
+}
+
+type PlayerState struct {
+	ID PlayerID `json:"id"`
+	Y  int      `json:"y"`
+	Dy int      `json:"dy"`
+}
+
+func NewPlayer(room *Room, conn *websocket.Conn) *Player {
+	return &Player{
+		ID:   PlayerID(uuid.NewString()),
+		Room: room,
+		Conn: conn,
+		Send: make(chan gameState, 1),
+		Y:    height/2 - playerHeight/2,
+	}
+}
+
+func (p *Player) GetState() PlayerState {
+	return PlayerState{
+		ID: p.ID,
+		Y:  p.Y,
+		Dy: p.Dy,
+	}
+}
+func (p *Player) ReadAction() {
 	defer func() {
 		p.Room.Leave <- p
 		p.Conn.Close()
 	}()
+
 	p.Conn.SetReadDeadline(time.Now().Add(pongWait))
-	p.Conn.SetPongHandler(func(string) error { p.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	p.Conn.SetPongHandler(func(string) error {
+		p.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
 	for {
-		_, message, err := p.Conn.ReadMessage()
+		err := p.Conn.ReadJSON(&p.action)
 		if err != nil {
 			log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -41,8 +78,6 @@ func (p *Player) ReadPump() {
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		p.Room.Broadcast <- message
 	}
 }
 
@@ -55,31 +90,57 @@ func (p *Player) WritePump() {
 
 	for {
 		select {
-		case message, ok := <-p.Send:
+		case state, ok := <-p.Send:
+
+			p.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				p.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := p.Conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
-			n := len(p.Send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-p.Send)
-			}
+			err := p.Conn.WriteJSON(state)
 
-			if err := w.Close(); err != nil {
+			if err != nil {
+				log.Println(err)
 				return
 			}
 		case <-ticker.C:
 			p.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := p.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Println(err)
 				return
 			}
 		}
+	}
+}
+
+func (p *Player) updatePosition() {
+	p.updateSpeed()
+	p.Y += p.Dy
+}
+
+func (p *Player) updateSpeed() {
+	if p.action.Up && !p.action.Down {
+		p.pressUp()
+	} else if p.action.Down && !p.action.Up {
+		p.pressDown()
+	} else if !p.action.Up && !p.action.Down {
+		p.stop()
+	}
+}
+
+func (p *Player) pressUp() {
+	p.Dy = max(-maxSpeed, p.Dy-acceleration)
+}
+
+func (p *Player) pressDown() {
+	p.Dy = min(maxSpeed, p.Dy+acceleration)
+}
+
+func (p *Player) stop() {
+	if p.Dy > 0 {
+		p.Dy -= acceleration
+	} else if p.Dy < 0 {
+		p.Dy += acceleration
 	}
 }
