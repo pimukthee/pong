@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -15,12 +16,27 @@ const (
 	finish
 )
 
+const (
+	tickRate     = 60 
+	tickInterval = time.Second / tickRate
+
+	width        = 750
+	height       = 585
+	grid         = 15
+	playerHeight = grid * 5
+)
+
+type gameState struct {
+	Player1 PlayerState `json:"player1"`
+	Player2 PlayerState `json:"player2"`
+}
+
 type Room struct {
 	ID           RoomID
 	Status       int
 	PlayersCount int
 	Players      [2]*Player
-	Broadcast    chan []byte
+	Broadcast    chan gameState
 	Join         chan *Player
 	Leave        chan *Player
 }
@@ -29,7 +45,7 @@ func NewRoom() Room {
 	return Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
-		Broadcast: make(chan []byte),
+		Broadcast: make(chan gameState),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
 	}
@@ -45,11 +61,17 @@ func (r *Room) Run(ctx context.Context) {
 		fmt.Println("clear room")
 	}(ctx.Value("game").(map[RoomID]*Room), r.ID)
 
-  for loop := true; loop; {
+	done := make(chan struct{})
+	begin := make(chan struct{})
+
+	go r.updateState(begin, done)
+
+	for loop := true; loop; {
 		select {
 		case player := <-r.Join:
 			r.addPlayer(player)
-
+			fmt.Println("JOIN")
+			begin <- struct{}{}
 		case player := <-r.Leave:
 			r.removePlayer(player)
 			close(player.Send)
@@ -57,18 +79,35 @@ func (r *Room) Run(ctx context.Context) {
 
 		case message := <-r.Broadcast:
 			players := r.Players[:]
-			for i, player := range players {
-				if player == nil {
+			for i := range players {
+				if players[i] == nil {
 					continue
 				}
 
 				select {
-				case player.Send <- message:
+				case players[i].Send <- message:
 				default:
-					close(player.Send)
+					close(players[i].Send)
 					players[i] = nil
 				}
 			}
+		}
+	}
+	done <- struct{}{}
+}
+
+func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
+	ticker := time.NewTicker(tickInterval)
+	defer ticker.Stop()
+
+	<-begin
+	for {
+		select {
+		case <-ticker.C:
+			r.Players[0].updatePosition()
+			r.Broadcast <- gameState{Player1: r.Players[0].GetState()}
+		case <-done:
+			return
 		}
 	}
 }

@@ -22,6 +22,10 @@
     <canvas width="750" height="585" id="game"></canvas>
     <script>
       var conn;
+      var id;
+      var action;
+      var lastUpdateTimestamp = Date.now();
+
       if (window["WebSocket"]) {
         pathnames = window.location.pathname.split("/");
         roomId = pathnames.pop() || pathnames.pop();
@@ -32,7 +36,14 @@
           console.log("player left");
         };
         conn.onmessage = function (evt) {
-          console.log(evt.data);
+          // first message
+          if (id == null) {
+            id = evt.data;
+          } else {
+            action = JSON.parse(evt.data);
+            leftPaddle.dy = action.player1.dy
+            leftPaddle.y = action.player1.y
+          }
         };
       } else {
         alert("Your browser does not support WebSockets.");
@@ -74,6 +85,8 @@
 
         updateLeftPaddleSpeed();
         leftPaddle.y += leftPaddle.dy;
+        rightPaddle.y =
+          typeof action === "undefined" ? rightPaddle.y : action.player1.y;
 
         context.fillStyle = "white";
         context.fillRect(
@@ -99,31 +112,35 @@
         requestAnimationFrame(draw);
       }
 
+      function lerp(start, end, fraction) {
+        return start * (1 - fraction) + end * fraction;
+      }
+
       document.addEventListener("keydown", function (e) {
         if (e.which === Arrows.Up) {
           if (!leftPaddle.acceleratingUp) {
+            leftPaddle.acceleratingUp = true;
             sendAction();
           }
-          leftPaddle.acceleratingUp = true;
         } else if (e.which == Arrows.Down) {
           if (!leftPaddle.acceleratingDown) {
+            leftPaddle.acceleratingDown = true;
             sendAction();
           }
-          leftPaddle.acceleratingDown = true;
         }
       });
 
       document.addEventListener("keyup", function (e) {
         if (e.which == Arrows.Up) {
           if (leftPaddle.acceleratingUp) {
+            leftPaddle.acceleratingUp = false;
             sendAction();
           }
-          leftPaddle.acceleratingUp = false;
         } else if (e.which == Arrows.Down) {
           if (leftPaddle.acceleratingDown) {
+            leftPaddle.acceleratingDown = false;
             sendAction();
           }
-          leftPaddle.acceleratingDown = false;
         }
       });
 
@@ -142,10 +159,12 @@
       }
 
       function sendAction() {
-        conn.send(JSON.stringify({
-          up: leftPaddle.acceleratingUp,
-          down: leftPaddle.acceleratingDown
-        }))
+        conn.send(
+          JSON.stringify({
+            up: leftPaddle.acceleratingUp,
+            down: leftPaddle.acceleratingDown,
+          }),
+        );
       }
       draw();
     </script>
