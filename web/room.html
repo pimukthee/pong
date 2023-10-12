@@ -66,7 +66,7 @@
         x: canvas.width / 2,
         y: canvas.height / 2,
         dx: -ballSpeed,
-        dy: 0,
+        dy: 3,
         width: grid,
         height: grid,
       }
@@ -92,8 +92,9 @@
       function draw() {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
+        moveBall();
         updateLeftPaddleSpeed();
-        leftPaddle.y = movePaddle();
+        movePaddle();
 
         context.fillStyle = "white";
         context.fillRect(ball.x, ball.y, ball.width, ball.height)
@@ -120,12 +121,35 @@
         requestAnimationFrame(draw);
       }
 
+      function moveBall() {
+        const newY = ball.y + ball.dy;
+        const newX = ball.x + ball.dx;
+
+        // bounce horizontal boundaries
+        if (newY >= grid && newY <= canvas.height - grid) {
+          ball.y = newY;
+          ball.x = newX;
+        } else {
+          ball.dy *= -1;
+          ball.x = newX;
+        }
+
+        // bounce vertical boundaries
+        if (newX >= 0 && newX <= canvas.width) {
+          ball.y = newY;
+          ball.x = newX;
+        } else {
+          ball.dx *= -1;
+          ball.y = newY;
+        }
+        console.log(ball.x, ball.y);
+      }
+
       function movePaddle() {
         const newY = leftPaddle.y + leftPaddle.dy;
         if (newY <= maxHeight && newY >= grid) {
-          return newY;
+          leftPaddle.y = newY;
         }
-        return leftPaddle.y;
       }
 
       document.addEventListener("keydown", function (e) {
