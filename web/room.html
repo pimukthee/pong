@@ -41,8 +41,9 @@
             id = evt.data;
           } else {
             action = JSON.parse(evt.data);
-            leftPaddle.dy = action.player1.dy
-            leftPaddle.y = action.player1.y
+            // leftPaddle.dy = action.player1.dy
+            // leftPaddle.y = action.player1.y
+            rightPaddle.y = leftPaddle.y
           }
         };
       } else {
@@ -52,7 +53,7 @@
       const context = canvas.getContext("2d");
       const grid = 15;
       const paddleHeight = grid * 5;
-      const maxPaddleY = canvas.height - grid - paddleHeight;
+      const maxHeight = canvas.height - grid - paddleHeight;
       const Arrows = {
         Up: 38,
         Down: 40,
@@ -63,7 +64,7 @@
 
       const leftPaddle = {
         x: grid * 2,
-        y: canvas.height / 2 - paddleHeight / 2,
+        y: canvas.height / 2 - paddleHeight / 2, // top of the paddle
         width: grid,
         height: paddleHeight,
         acceleratingUp: false,
@@ -84,9 +85,8 @@
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         updateLeftPaddleSpeed();
-        leftPaddle.y += leftPaddle.dy;
-        rightPaddle.y =
-          typeof action === "undefined" ? rightPaddle.y : action.player1.y;
+        leftPaddle.y = movePaddle();
+        console.log(leftPaddle.y)
 
         context.fillStyle = "white";
         context.fillRect(
@@ -112,8 +112,12 @@
         requestAnimationFrame(draw);
       }
 
-      function lerp(start, end, fraction) {
-        return start * (1 - fraction) + end * fraction;
+      function movePaddle() {
+        const newY = leftPaddle.y + leftPaddle.dy;
+        if (newY <= maxHeight && newY >= grid) {
+          return newY;
+        }
+        return leftPaddle.y;
       }
 
       document.addEventListener("keydown", function (e) {

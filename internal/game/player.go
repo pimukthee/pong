@@ -12,10 +12,10 @@ const (
 	writeWait  = 10 * time.Second
 	pongWait   = 60 * time.Second
 	pingPeriod = (pongWait * 9) / 10
-)
 
-const acceleration = 3
-const maxSpeed = 6
+  acceleration = 3
+  maxSpeed = 6
+)
 
 type Action struct {
 	Up   bool `json:"up"`
@@ -116,7 +116,16 @@ func (p *Player) WritePump() {
 
 func (p *Player) updatePosition() {
 	p.updateSpeed()
-	p.Y += p.Dy
+  p.Y = p.move()
+}
+
+func (p *Player) move() int {
+  newY := p.Y + p.Dy
+  if newY <= maxHeight && newY >= grid {
+    return newY
+  }
+
+  return p.Y
 }
 
 func (p *Player) updateSpeed() {

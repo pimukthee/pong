@@ -17,13 +17,14 @@ const (
 )
 
 const (
-	tickRate     = 60 
+	tickRate     = 60
 	tickInterval = time.Second / tickRate
 
 	width        = 750
 	height       = 585
 	grid         = 15
 	playerHeight = grid * 5
+	maxHeight    = height - grid - playerHeight
 )
 
 type gameState struct {
