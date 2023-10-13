@@ -20,16 +20,22 @@ const (
 	tickRate     = 60
 	tickInterval = time.Second / tickRate
 
-	width        = 750
-	height       = 585
+	boardWidth   = 750
+	boardHeight  = 585
 	grid         = 15
 	playerHeight = grid * 5
-	maxHeight    = height - grid - playerHeight
+	maxHeight    = boardHeight - grid - playerHeight
+
+	left  = Seat(false)
+	right = Seat(true)
 )
+
+type Seat bool
 
 type gameState struct {
 	Player1 PlayerState `json:"player1"`
 	Player2 PlayerState `json:"player2"`
+	Ball    Ball        `json:"ball"`
 }
 
 type Room struct {
@@ -37,6 +43,7 @@ type Room struct {
 	Status       int
 	PlayersCount int
 	Players      [2]*Player
+	Ball         *Ball
 	Broadcast    chan gameState
 	Join         chan *Player
 	Leave        chan *Player
@@ -46,6 +53,7 @@ func NewRoom() Room {
 	return Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
+		Ball:      NewBall(),
 		Broadcast: make(chan gameState),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
@@ -111,7 +119,9 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 			if r.Status == ready {
 				r.Players[0].updatePosition()
 				r.Players[1].updatePosition()
-				r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState()}
+        r.Ball.move()
+
+        r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState(), Ball: *r.Ball}
 			}
 		case <-done:
 			return
@@ -126,14 +136,20 @@ func (r *Room) isEmpty() bool {
 func (r *Room) addPlayer(p *Player) {
 	r.PlayersCount += 1
 
-	if r.Players[0] == nil {
-		r.Players[0] = p
-		return
-	}
-	if r.Players[1] == nil {
-		r.Players[1] = p
+	i := r.getAvailableSeat()
+	r.Players[i] = p
+
+	if r.PlayersCount == 2 {
 		r.Status = ready
 	}
+}
+
+func (r *Room) getAvailableSeat() int {
+	if r.Players[0] == nil {
+		return 0
+	}
+
+	return 1
 }
 
 func (r *Room) removePlayer(p *Player) {
