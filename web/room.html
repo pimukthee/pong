@@ -126,7 +126,7 @@
         const newX = ball.x + ball.dx;
 
         // bounce horizontal boundaries
-        if (newY >= grid && newY <= canvas.height - grid) {
+        if (newY >= grid && newY <= canvas.height - 2*grid) {
           ball.y = newY;
           ball.x = newX;
         } else {
@@ -135,7 +135,7 @@
         }
 
         // bounce vertical boundaries
-        if (newX >= 0 && newX <= canvas.width) {
+        if (newX >= 0 && newX <= canvas.width - grid) {
           ball.y = newY;
           ball.x = newX;
         } else {
