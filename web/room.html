@@ -23,7 +23,7 @@
     <script>
       var conn;
       var id;
-      var side;
+      var seat;
       var action;
       var playerPaddle;
       var opponentPaddle;
@@ -42,11 +42,12 @@
           if (id == null) {
             msg = JSON.parse(evt.data);
             id = msg.id;
-            side = msg.side;
-            playerPaddle = side ? leftPaddle : rightPaddle;
-            opponentPaddle = side ? rightPaddle : leftPaddle;
-            
-            draw()
+            seat = msg.seat;
+
+            playerPaddle = seat ? rightPaddle : leftPaddle;
+            opponentPaddle = seat ? leftPaddle : rightPaddle;
+
+            draw();
           } else {
             action = JSON.parse(evt.data);
             syncServer();
@@ -62,8 +63,8 @@
         rightPaddle.y = action.player2.y;
         rightPaddle.dy = action.player2.dy;
 
-        playerPaddle = side ? leftPaddle : rightPaddle;
-        opponentPaddle = side ? rightPaddle: leftPaddle;
+        playerPaddle = seat ? rightPaddle : leftPaddle;
+        opponentPaddle = seat ? leftPaddle : rightPaddle;
       }
 
       const canvas = document.getElementById("game");
