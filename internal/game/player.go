@@ -55,7 +55,7 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 		Conn: conn,
 		Send: make(chan gameState, 1),
 		Seat: seat,
-		Y:    height/2 - playerHeight/2,
+		Y:    boardHeight/2 - playerHeight/2,
 	}
 }
 

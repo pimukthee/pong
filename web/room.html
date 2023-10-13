@@ -62,6 +62,10 @@
         leftPaddle.y = action.player1.y;
         rightPaddle.y = action.player2.y;
         rightPaddle.dy = action.player2.dy;
+        ball.y = action.ball.y;
+        ball.x = action.ball.x;
+        ball.dy = action.ball.dy;
+        ball.dx = action.ball.dx;
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
