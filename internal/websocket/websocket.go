@@ -14,6 +14,11 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+type initMessage struct {
+	ID   game.PlayerID `json:"id"`
+	Seat game.Seat     `json:"seat"`
+}
+
 func ServeWs(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -36,7 +41,10 @@ func ServeWs(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	player := game.NewPlayer(room, conn)
 	player.Room.Join <- player
 	// send player id back to the client
-	conn.WriteMessage(websocket.TextMessage, []byte(player.ID))
+	conn.WriteJSON(initMessage{
+		ID:   player.ID,
+		Seat: player.Seat,
+	})
 
 	go player.WritePump()
 	go player.ReadAction()
