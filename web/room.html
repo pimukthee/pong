@@ -41,9 +41,10 @@
             id = evt.data;
           } else {
             action = JSON.parse(evt.data);
-            // leftPaddle.dy = action.player1.dy
-            // leftPaddle.y = action.player1.y
-            rightPaddle.y = leftPaddle.y
+            const [player, opponent] = getPlayers(action);
+            leftPaddle.dy = player.dy
+            leftPaddle.y = player.y 
+            rightPaddle.y = opponent.y 
           }
         };
       } else {
@@ -53,7 +54,7 @@
       const context = canvas.getContext("2d");
       const grid = 15;
       const paddleHeight = grid * 5;
-      const maxHeight = canvas.height - grid - paddleHeight;
+      const maxPaddleY = canvas.height - grid - paddleHeight;
       const Arrows = {
         Up: 38,
         Down: 40,
@@ -85,8 +86,7 @@
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         updateLeftPaddleSpeed();
-        leftPaddle.y = movePaddle();
-        console.log(leftPaddle.y)
+        moveLeftPaddle();
 
         context.fillStyle = "white";
         context.fillRect(
@@ -112,12 +112,19 @@
         requestAnimationFrame(draw);
       }
 
-      function movePaddle() {
-        const newY = leftPaddle.y + leftPaddle.dy;
-        if (newY <= maxHeight && newY >= grid) {
-          return newY;
+      function getPlayers(action) {
+        if (action.player1.id === id) {
+          return [action.player1, action.player2];
         }
-        return leftPaddle.y;
+
+        return [action.player2, action.player1];
+      }
+
+      function moveLeftPaddle() {
+        const newY = leftPaddle.y + leftPaddle.dy;
+        if (newY <= maxPaddleY && newY >= grid) {
+          leftPaddle.y = newY;
+        }
       }
 
       document.addEventListener("keydown", function (e) {

@@ -71,8 +71,10 @@ func (r *Room) Run(ctx context.Context) {
 		select {
 		case player := <-r.Join:
 			r.addPlayer(player)
-			fmt.Println("JOIN")
-			begin <- struct{}{}
+			if r.Status == ready {
+				begin <- struct{}{}
+			}
+
 		case player := <-r.Leave:
 			r.removePlayer(player)
 			close(player.Send)
@@ -102,11 +104,15 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 	defer ticker.Stop()
 
 	<-begin
+
 	for {
 		select {
 		case <-ticker.C:
-			r.Players[0].updatePosition()
-			r.Broadcast <- gameState{Player1: r.Players[0].GetState()}
+			if r.Status == ready {
+				r.Players[0].updatePosition()
+				r.Players[1].updatePosition()
+				r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState()}
+			}
 		case <-done:
 			return
 		}
