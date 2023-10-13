@@ -23,8 +23,10 @@
     <script>
       var conn;
       var id;
+      var side;
       var action;
-      var lastUpdateTimestamp = Date.now();
+      var playerPaddle;
+      var opponentPaddle;
 
       if (window["WebSocket"]) {
         pathnames = window.location.pathname.split("/");
@@ -38,18 +40,32 @@
         conn.onmessage = function (evt) {
           // first message
           if (id == null) {
-            id = evt.data;
+            msg = JSON.parse(evt.data);
+            id = msg.id;
+            side = msg.side;
+            playerPaddle = side ? leftPaddle : rightPaddle;
+            opponentPaddle = side ? rightPaddle : leftPaddle;
+            
+            draw()
           } else {
             action = JSON.parse(evt.data);
-            const [player, opponent] = getPlayers(action);
-            leftPaddle.dy = player.dy
-            leftPaddle.y = player.y 
-            rightPaddle.y = opponent.y 
+            syncServer();
           }
         };
       } else {
         alert("Your browser does not support WebSockets.");
       }
+
+      function syncServer() {
+        leftPaddle.dy = action.player1.dy;
+        leftPaddle.y = action.player1.y;
+        rightPaddle.y = action.player2.y;
+        rightPaddle.dy = action.player2.dy;
+
+        playerPaddle = side ? leftPaddle : rightPaddle;
+        opponentPaddle = side ? rightPaddle: leftPaddle;
+      }
+
       const canvas = document.getElementById("game");
       const context = canvas.getContext("2d");
       const grid = 15;
@@ -70,7 +86,7 @@
         dy: 3,
         width: grid,
         height: grid,
-      }
+      };
       const leftPaddle = {
         x: grid * 2,
         y: canvas.height / 2 - paddleHeight / 2, // top of the paddle
@@ -94,22 +110,22 @@
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         moveBall();
-        updateLeftPaddleSpeed();
-        moveLeftPaddle();
+        updatePlayerPaddleSpeed();
+        movePlayerPaddle();
 
         context.fillStyle = "white";
-        context.fillRect(ball.x, ball.y, ball.width, ball.height)
+        context.fillRect(ball.x, ball.y, ball.width, ball.height);
         context.fillRect(
-          leftPaddle.x,
-          leftPaddle.y,
-          leftPaddle.width,
-          leftPaddle.height,
+          playerPaddle.x,
+          playerPaddle.y,
+          playerPaddle.width,
+          playerPaddle.height,
         );
         context.fillRect(
-          rightPaddle.x,
-          rightPaddle.y,
-          rightPaddle.width,
-          rightPaddle.height,
+          opponentPaddle.x,
+          opponentPaddle.y,
+          opponentPaddle.width,
+          opponentPaddle.height,
         );
 
         context.fillstyle = "lightgrey";
@@ -127,7 +143,7 @@
         const newX = ball.x + ball.dx;
 
         // bounce horizontal boundaries
-        if (newY >= grid && newY <= canvas.height - 2*grid) {
+        if (newY >= grid && newY <= canvas.height - 2 * grid) {
           ball.y = newY;
           ball.x = newX;
         } else {
@@ -143,7 +159,6 @@
           ball.dx *= -1;
           ball.y = newY;
         }
-        console.log(ball.x, ball.y);
       }
 
       function getPlayers(action) {
@@ -154,22 +169,22 @@
         return [action.player2, action.player1];
       }
 
-      function moveLeftPaddle() {
-        const newY = leftPaddle.y + leftPaddle.dy;
+      function movePlayerPaddle() {
+        const newY = playerPaddle.y + playerPaddle.dy;
         if (newY <= maxPaddleY && newY >= grid) {
-          leftPaddle.y = newY;
+          playerPaddle.y = newY;
         }
       }
 
       document.addEventListener("keydown", function (e) {
         if (e.which === Arrows.Up) {
-          if (!leftPaddle.acceleratingUp) {
-            leftPaddle.acceleratingUp = true;
+          if (!playerPaddle.acceleratingUp) {
+            playerPaddle.acceleratingUp = true;
             sendAction();
           }
         } else if (e.which == Arrows.Down) {
-          if (!leftPaddle.acceleratingDown) {
-            leftPaddle.acceleratingDown = true;
+          if (!playerPaddle.acceleratingDown) {
+            playerPaddle.acceleratingDown = true;
             sendAction();
           }
         }
@@ -177,28 +192,34 @@
 
       document.addEventListener("keyup", function (e) {
         if (e.which == Arrows.Up) {
-          if (leftPaddle.acceleratingUp) {
-            leftPaddle.acceleratingUp = false;
+          if (playerPaddle.acceleratingUp) {
+            playerPaddle.acceleratingUp = false;
             sendAction();
           }
         } else if (e.which == Arrows.Down) {
-          if (leftPaddle.acceleratingDown) {
-            leftPaddle.acceleratingDown = false;
+          if (playerPaddle.acceleratingDown) {
+            playerPaddle.acceleratingDown = false;
             sendAction();
           }
         }
       });
 
-      function updateLeftPaddleSpeed() {
-        if (leftPaddle.acceleratingUp && !leftPaddle.acceleratingDown) {
-          leftPaddle.dy = Math.max(-maxSpeed, leftPaddle.dy - acceleration);
-        } else if (leftPaddle.acceleratingDown && !leftPaddle.acceleratingUp) {
-          leftPaddle.dy = Math.min(maxSpeed, leftPaddle.dy + acceleration);
-        } else if (!leftPaddle.acceleratingUp && !leftPaddle.acceleratingDown) {
-          if (leftPaddle.dy > 0) {
-            leftPaddle.dy -= acceleration;
-          } else if (leftPaddle.dy < 0) {
-            leftPaddle.dy += acceleration;
+      function updatePlayerPaddleSpeed() {
+        if (playerPaddle.acceleratingUp && !playerPaddle.acceleratingDown) {
+          playerPaddle.dy = Math.max(-maxSpeed, playerPaddle.dy - acceleration);
+        } else if (
+          playerPaddle.acceleratingDown &&
+          !playerPaddle.acceleratingUp
+        ) {
+          playerPaddle.dy = Math.min(maxSpeed, playerPaddle.dy + acceleration);
+        } else if (
+          !playerPaddle.acceleratingUp &&
+          !playerPaddle.acceleratingDown
+        ) {
+          if (playerPaddle.dy > 0) {
+            playerPaddle.dy -= acceleration;
+          } else if (playerPaddle.dy < 0) {
+            playerPaddle.dy += acceleration;
           }
         }
       }
@@ -206,12 +227,11 @@
       function sendAction() {
         conn.send(
           JSON.stringify({
-            up: leftPaddle.acceleratingUp,
-            down: leftPaddle.acceleratingDown,
+            up: playerPaddle.acceleratingUp,
+            down: playerPaddle.acceleratingDown,
           }),
         );
       }
-      draw();
     </script>
   </body>
 </html>

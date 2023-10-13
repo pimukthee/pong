@@ -25,7 +25,12 @@ const (
 	grid         = 15
 	playerHeight = grid * 5
 	maxHeight    = height - grid - playerHeight
+
+	left  = Seat(false)
+	right = Seat(true)
 )
+
+type Seat bool
 
 type gameState struct {
 	Player1 PlayerState `json:"player1"`
@@ -126,14 +131,20 @@ func (r *Room) isEmpty() bool {
 func (r *Room) addPlayer(p *Player) {
 	r.PlayersCount += 1
 
-	if r.Players[0] == nil {
-		r.Players[0] = p
-		return
-	}
-	if r.Players[1] == nil {
-		r.Players[1] = p
+	i := r.getAvailableSeat()
+	r.Players[i] = p
+
+	if r.PlayersCount == 2 {
 		r.Status = ready
 	}
+}
+
+func (r *Room) getAvailableSeat() int {
+	if r.Players[0] == nil {
+		return 0
+	}
+
+	return 1
 }
 
 func (r *Room) removePlayer(p *Player) {

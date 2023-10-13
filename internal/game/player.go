@@ -13,8 +13,8 @@ const (
 	pongWait   = 60 * time.Second
 	pingPeriod = (pongWait * 9) / 10
 
-  acceleration = 3
-  maxSpeed = 6
+	acceleration = 3
+	maxSpeed     = 6
 )
 
 type Action struct {
@@ -29,23 +29,32 @@ type Player struct {
 	Room   *Room
 	Conn   *websocket.Conn
 	Send   chan gameState
-	action Action
+	Action Action
+	Seat   Seat
+	X      int
 	Y      int
 	Dy     int
 }
 
 type PlayerState struct {
 	ID PlayerID `json:"id"`
+	X  int      `json:"x"`
 	Y  int      `json:"y"`
 	Dy int      `json:"dy"`
 }
 
 func NewPlayer(room *Room, conn *websocket.Conn) *Player {
+	seat := left
+	if room.getAvailableSeat() == 1 {
+		seat = right
+	}
+
 	return &Player{
 		ID:   PlayerID(uuid.NewString()),
 		Room: room,
 		Conn: conn,
 		Send: make(chan gameState, 1),
+		Seat: seat,
 		Y:    height/2 - playerHeight/2,
 	}
 }
@@ -53,6 +62,7 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 func (p *Player) GetState() PlayerState {
 	return PlayerState{
 		ID: p.ID,
+		X:  p.X,
 		Y:  p.Y,
 		Dy: p.Dy,
 	}
@@ -70,7 +80,7 @@ func (p *Player) ReadAction() {
 	})
 
 	for {
-		err := p.Conn.ReadJSON(&p.action)
+		err := p.Conn.ReadJSON(&p.Action)
 		if err != nil {
 			log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -116,24 +126,24 @@ func (p *Player) WritePump() {
 
 func (p *Player) updatePosition() {
 	p.updateSpeed()
-  p.Y = p.move()
+	p.Y = p.move()
 }
 
 func (p *Player) move() int {
-  newY := p.Y + p.Dy
-  if newY <= maxHeight && newY >= grid {
-    return newY
-  }
+	newY := p.Y + p.Dy
+	if newY <= maxHeight && newY >= grid {
+		return newY
+	}
 
-  return p.Y
+	return p.Y
 }
 
 func (p *Player) updateSpeed() {
-	if p.action.Up && !p.action.Down {
+	if p.Action.Up && !p.Action.Down {
 		p.pressUp()
-	} else if p.action.Down && !p.action.Up {
+	} else if p.Action.Down && !p.Action.Up {
 		p.pressDown()
-	} else if !p.action.Up && !p.action.Down {
+	} else if !p.Action.Up && !p.Action.Down {
 		p.stop()
 	}
 }
