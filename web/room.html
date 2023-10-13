@@ -62,10 +62,10 @@
         leftPaddle.y = action.player1.y;
         rightPaddle.y = action.player2.y;
         rightPaddle.dy = action.player2.dy;
-        ball.y = action.ball.y;
-        ball.x = action.ball.x;
-        ball.dy = action.ball.dy;
-        ball.dx = action.ball.dx;
+        // ball.y = action.ball.y;
+        // ball.x = action.ball.x;
+        // ball.dy = action.ball.dy;
+        // ball.dx = action.ball.dx;
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
@@ -147,6 +147,18 @@
         const newY = ball.y + ball.dy;
         const newX = ball.x + ball.dx;
 
+        if (checkCollision(ball, playerPaddle)) {
+          ball.dx *= -1;
+          ball.x = playerPaddle.x + playerPaddle.width + 1;
+          return
+        }
+
+        if (checkCollision(ball, opponentPaddle)) {
+          ball.dx *= -1;
+          ball.x = opponentPaddle.x - ball.width;
+          return
+        }
+
         // bounce horizontal boundaries
         if (newY >= grid && newY <= canvas.height - 2 * grid) {
           ball.y = newY;
@@ -227,6 +239,15 @@
             playerPaddle.dy += acceleration;
           }
         }
+      }
+
+      function checkCollision(ball, paddle) {
+        return (
+          ball.x < paddle.x + paddle.width &&
+          ball.x + ball.width > paddle.x &&
+          ball.y < paddle.y + paddle.height &&
+          ball.y + ball.height > paddle.y
+        );
       }
 
       function sendAction() {
