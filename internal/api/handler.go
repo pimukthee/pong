@@ -25,7 +25,7 @@ func createRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	}
 
 	room := game.NewRoom()
-	g.Rooms[room.ID] = &room
+	g.Rooms[room.ID] = room
 	c := context.WithValue(context.Background(), "game", g.Rooms)
 	go room.Run(c)
 

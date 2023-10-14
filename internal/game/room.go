@@ -49,15 +49,17 @@ type Room struct {
 	Leave        chan *Player
 }
 
-func NewRoom() Room {
-	return Room{
+func NewRoom() *Room {
+	room := Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
-		Ball:      NewBall(),
 		Broadcast: make(chan gameState),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
 	}
+	room.Ball = NewBall(&room)
+
+	return &room
 }
 
 func (r *Room) IsWaiting() bool {
@@ -119,9 +121,9 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 			if r.Status == ready {
 				r.Players[0].updatePosition()
 				r.Players[1].updatePosition()
-        r.Ball.move()
+				r.Ball.move()
 
-        r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState(), Ball: *r.Ball}
+				r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState(), Ball: *r.Ball}
 			}
 		case <-done:
 			return

@@ -62,10 +62,10 @@
         leftPaddle.y = action.player1.y;
         rightPaddle.y = action.player2.y;
         rightPaddle.dy = action.player2.dy;
-        // ball.y = action.ball.y;
-        // ball.x = action.ball.x;
-        // ball.dy = action.ball.dy;
-        // ball.dx = action.ball.dx;
+        ball.y = action.ball.y;
+        ball.x = action.ball.x;
+        ball.dy = action.ball.dy;
+        ball.dx = action.ball.dx;
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
@@ -149,14 +149,15 @@
 
         if (checkCollision(ball, playerPaddle)) {
           ball.dx *= -1;
-          ball.x = playerPaddle.x + playerPaddle.width + 1;
-          return
+          ball.x = correctPositionAfterCollided(ball, playerPaddle, seat);
+
+          return;
         }
 
         if (checkCollision(ball, opponentPaddle)) {
           ball.dx *= -1;
-          ball.x = opponentPaddle.x - ball.width;
-          return
+          ball.x = correctPositionAfterCollided(ball, opponentPaddle, !seat);
+          return;
         }
 
         // bounce horizontal boundaries
@@ -176,6 +177,13 @@
           ball.dx *= -1;
           ball.y = newY;
         }
+      }
+
+      function correctPositionAfterCollided(ball, paddle, side) {
+        if (side) { // right
+          return paddle.x - ball.width;
+        }
+        return paddle.x + paddle.width;
       }
 
       function getPlayers(action) {

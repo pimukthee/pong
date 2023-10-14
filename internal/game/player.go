@@ -31,6 +31,8 @@ type Player struct {
 	Send   chan gameState
 	Action Action
 	Seat   Seat
+	width  int
+	height int
 	X      int
 	Y      int
 	Dy     int
@@ -49,14 +51,24 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 		seat = right
 	}
 
-	return &Player{
+  player := &Player{
 		ID:   PlayerID(uuid.NewString()),
 		Room: room,
 		Conn: conn,
 		Send: make(chan gameState, 1),
 		Seat: seat,
 		Y:    boardHeight/2 - playerHeight/2,
+    width: grid,
+    height: playerHeight,
 	}
+
+  if seat == right {
+    player.X = boardWidth - grid * 3 
+  } else {
+    player.X = grid * 2
+  }
+
+	return player 
 }
 
 func (p *Player) GetState() PlayerState {
