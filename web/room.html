@@ -24,7 +24,6 @@
       var conn;
       var id;
       var seat;
-      var action;
       var playerPaddle;
       var opponentPaddle;
 
@@ -38,34 +37,42 @@
           console.log("player left");
         };
         conn.onmessage = function (evt) {
-          // first message
-          if (id == null) {
-            msg = JSON.parse(evt.data);
-            id = msg.id;
-            seat = msg.seat;
+          msg = JSON.parse(evt.data);
 
-            playerPaddle = seat ? rightPaddle : leftPaddle;
-            opponentPaddle = seat ? leftPaddle : rightPaddle;
+          if (msg.type === "init") {
+            initGame(msg.data);
 
-            draw();
-          } else {
-            action = JSON.parse(evt.data);
-            syncServer();
+            return;
+          }
+          if (msg.type === "update") {
+            syncServer(msg.data);
+
+            return;
           }
         };
       } else {
         alert("Your browser does not support WebSockets.");
       }
 
-      function syncServer() {
-        leftPaddle.dy = action.player1.dy;
-        leftPaddle.y = action.player1.y;
-        rightPaddle.y = action.player2.y;
-        rightPaddle.dy = action.player2.dy;
-        ball.y = action.ball.y;
-        ball.x = action.ball.x;
-        ball.dy = action.ball.dy;
-        ball.dx = action.ball.dx;
+      function initGame(data) {
+        id = data.id;
+        seat = data.seat;
+
+        playerPaddle = seat ? rightPaddle : leftPaddle;
+        opponentPaddle = seat ? leftPaddle : rightPaddle;
+
+        draw();
+      }
+
+      function syncServer(state) {
+        leftPaddle.dy = state.player1.dy;
+        leftPaddle.y = state.player1.y;
+        rightPaddle.y = state.player2.y;
+        rightPaddle.dy = state.player2.dy;
+        ball.y = state.ball.y;
+        ball.x = state.ball.x;
+        ball.dy = state.ball.dy;
+        ball.dx = state.ball.dx;
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
@@ -75,7 +82,7 @@
       const context = canvas.getContext("2d");
       const grid = 15;
       const paddleHeight = grid * 5;
-      const maxBounceAngle = 5*Math.PI / 12
+      const maxBounceAngle = (5 * Math.PI) / 12;
       const maxPaddleY = canvas.height - grid - paddleHeight;
       const Arrows = {
         Up: 38,
@@ -149,22 +156,22 @@
         const newX = ball.x + ball.dx;
 
         if (checkCollision(ball, playerPaddle)) {
-          const bounceAngle = calculateBounceAngle(ball, playerPaddle)
-          ball.dx = ~~(ballSpeed * Math.cos(bounceAngle))
-          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle))
+          const bounceAngle = calculateBounceAngle(ball, playerPaddle);
+          ball.dx = ~~(ballSpeed * Math.cos(bounceAngle));
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle));
 
-          ball.dx = correctXVelocity(ball.dx, seat)
+          ball.dx = correctXVelocity(ball.dx, seat);
           ball.x = correctPositionAfterCollided(ball, playerPaddle, seat);
 
           return;
         }
 
         if (checkCollision(ball, opponentPaddle)) {
-          const bounceAngle = calculateBounceAngle(ball, opponentPaddle)
-          ball.dx = ~~(ballSpeed * -Math.cos(bounceAngle))
-          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle))
+          const bounceAngle = calculateBounceAngle(ball, opponentPaddle);
+          ball.dx = ~~(ballSpeed * -Math.cos(bounceAngle));
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle));
 
-          ball.dx = correctXVelocity(ball.dx, !seat)
+          ball.dx = correctXVelocity(ball.dx, !seat);
           ball.x = correctPositionAfterCollided(ball, opponentPaddle, !seat);
 
           return;
@@ -190,12 +197,13 @@
       }
 
       function calculateBounceAngle(ball, paddle) {
-        const relativeIntersectY = (paddle.y + paddle.height/2) - (ball.y + ball.height / 2)
-        const normalized = relativeIntersectY / (paddle.height / 2)
+        const relativeIntersectY =
+          paddle.y + paddle.height / 2 - (ball.y + ball.height / 2);
+        const normalized = relativeIntersectY / (paddle.height / 2);
 
-        return normalized * maxBounceAngle
+        return normalized * maxBounceAngle;
       }
-      
+
       function correctXVelocity(dx, side) {
         if (dx != 0) return dx;
 
@@ -207,7 +215,8 @@
       }
 
       function correctPositionAfterCollided(ball, paddle, side) {
-        if (side) { // right
+        if (side) {
+          // right
           return paddle.x - ball.width;
         }
         return paddle.x + paddle.width;

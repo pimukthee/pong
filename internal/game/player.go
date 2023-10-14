@@ -51,24 +51,24 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 		seat = right
 	}
 
-  player := &Player{
-		ID:   PlayerID(uuid.NewString()),
-		Room: room,
-		Conn: conn,
-		Send: make(chan gameState, 1),
-		Seat: seat,
-		Y:    boardHeight/2 - playerHeight/2,
-    width: grid,
-    height: playerHeight,
+	player := &Player{
+		ID:     PlayerID(uuid.NewString()),
+		Room:   room,
+		Conn:   conn,
+		Send:   make(chan gameState, 1),
+		Seat:   seat,
+		Y:      boardHeight/2 - playerHeight/2,
+		width:  grid,
+		height: playerHeight,
 	}
 
-  if seat == right {
-    player.X = boardWidth - grid * 3 
-  } else {
-    player.X = grid * 2
-  }
+	if seat == right {
+		player.X = boardWidth - grid*3
+	} else {
+		player.X = grid * 2
+	}
 
-	return player 
+	return player
 }
 
 func (p *Player) GetState() PlayerState {
@@ -120,7 +120,12 @@ func (p *Player) WritePump() {
 				return
 			}
 
-			err := p.Conn.WriteJSON(state)
+			msg := Message{
+				Type: "update",
+				Data: state,
+			}
+
+			err := p.Conn.WriteJSON(msg)
 
 			if err != nil {
 				log.Println(err)

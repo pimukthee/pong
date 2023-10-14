@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path"
 	"pong/internal/game"
-	"pong/internal/websocket"
 )
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -55,18 +54,18 @@ func serveRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/room.html")
 }
 
-func NewHandler(game *game.Game) *http.ServeMux {
+func NewHandler(g *game.Game) *http.ServeMux {
 	handler := http.NewServeMux()
 
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
-		createRoom(game, w, r)
+		createRoom(g, w, r)
 	})
 	handler.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
-		serveRoom(game, w, r)
+		serveRoom(g, w, r)
 	})
 	handler.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) {
-		websocket.ServeWs(game, w, r)
+		game.ServeWs(g, w, r)
 	})
 
 	return handler
