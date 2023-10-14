@@ -28,7 +28,7 @@ type Player struct {
 	ID     PlayerID        `json:"id"`
 	Room   *Room           `json:"-"`
 	Conn   *websocket.Conn `json:"-"`
-	Send   chan gameState  `json:"-"`
+	Send   chan Message    `json:"-"`
 	Action Action          `json:"-"`
 	Seat   Seat            `json:"seat"`
 	width  int             `json:"-"`
@@ -49,7 +49,7 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 		ID:     PlayerID(uuid.NewString()),
 		Room:   room,
 		Conn:   conn,
-		Send:   make(chan gameState, 1),
+		Send:   make(chan Message, 1),
 		Seat:   seat,
 		Y:      boardHeight/2 - playerHeight/2,
 		width:  grid,
@@ -103,17 +103,12 @@ func (p *Player) WritePump() {
 
 	for {
 		select {
-		case state, ok := <-p.Send:
+		case msg, ok := <-p.Send:
 
 			p.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				p.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
-			}
-
-			msg := Message{
-				Type: "update",
-				Data: state,
 			}
 
 			err := p.Conn.WriteJSON(msg)

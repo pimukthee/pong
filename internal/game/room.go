@@ -45,7 +45,7 @@ type Room struct {
 	PlayersCount int
 	Players      [2]*Player
 	Ball         *Ball
-	Broadcast    chan gameState
+	Broadcast    chan Message
 	Join         chan *Player
 	Leave        chan *Player
 }
@@ -54,7 +54,7 @@ func NewRoom() *Room {
 	room := Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
-		Broadcast: make(chan gameState),
+		Broadcast: make(chan Message),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
 	}
@@ -94,10 +94,6 @@ func (r *Room) Run(ctx context.Context) {
 		case message := <-r.Broadcast:
 			players := r.Players[:]
 			for i := range players {
-				if players[i] == nil {
-					continue
-				}
-
 				select {
 				case players[i].Send <- message:
 				default:
@@ -129,7 +125,12 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 					r.reset(scoredPlayer)
 				}
 
-				r.Broadcast <- gameState{Player1: r.Players[0], Player2: r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer}
+				msg := Message{
+					Type: "update",
+					Data: gameState{Player1: r.Players[0], Player2: r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer},
+				}
+
+				r.Broadcast <- msg
 			}
 		case <-done:
 			return
