@@ -26,12 +26,14 @@
     </style>
   </head>
   <body>
-    <div id="score">0 : 1</div>
+    <div id="score">
+      <span id="left-player">0</span> : <span id="right-player">0</span>
+    </div>
     <canvas width="750" height="585" id="game"></canvas>
     <script>
       var conn;
       var id;
-      var seat;
+      var seat; // false is left true is right
       var playerPaddle;
       var opponentPaddle;
 
@@ -53,6 +55,12 @@
             return;
           }
           if (msg.type === "update") {
+            const scoredPlayer = msg.data.scoredPlayer;
+            if (scoredPlayer) {
+              updateScore(msg.data);
+              resetGame(scoredPlayer);
+              return;
+            }
             syncServer(msg.data);
 
             return;
@@ -70,6 +78,30 @@
         opponentPaddle = seat ? leftPaddle : rightPaddle;
 
         draw();
+      }
+
+      function updateScore(state) {
+        const player1 = state.player1;
+        const player2 = state.player2;
+
+        document.getElementById("left-player").innerHTML = player1.score;
+        document.getElementById("right-player").innerHTML = player2.score;
+      }
+
+      function resetGame(scoredPlayer) {
+        let dir = 1;
+        if (scoredPlayer.seat) {
+          dir = -1;
+        }
+
+        leftPaddle.dy = 0;
+        leftPaddle.y = boardHeight / 2 - paddleHeight / 2;
+        rightPaddle.dy = 0;
+        rightPaddle.y = boardHeight / 2 - paddleHeight / 2;
+        ball.y = boardHeight / 2;
+        ball.x = boardWidth / 2;
+        ball.dx = ballSpeed * dir;
+        ball.dy = 0;
       }
 
       function syncServer(state) {
@@ -90,8 +122,10 @@
       const context = canvas.getContext("2d");
       const grid = 15;
       const paddleHeight = grid * 5;
+      const boardHeight = canvas.height;
+      const boardWidth = canvas.width;
       const maxBounceAngle = (5 * Math.PI) / 12;
-      const maxPaddleY = canvas.height - grid - paddleHeight;
+      const maxPaddleY = boardHeight - grid - paddleHeight;
       const Arrows = {
         Up: 38,
         Down: 40,
@@ -101,8 +135,8 @@
       const ballSpeed = 10;
 
       const ball = {
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: boardWidth / 2,
+        y: boardHeight / 2,
         dx: -ballSpeed,
         dy: 0,
         width: grid,
@@ -110,7 +144,7 @@
       };
       const leftPaddle = {
         x: grid * 2,
-        y: canvas.height / 2 - paddleHeight / 2, // top of the paddle
+        y: boardHeight / 2 - paddleHeight / 2, // top of the paddle
         width: grid,
         height: paddleHeight,
         acceleratingUp: false,
@@ -118,8 +152,8 @@
         dy: 0,
       };
       const rightPaddle = {
-        x: canvas.width - grid * 3,
-        y: canvas.height / 2 - paddleHeight / 2,
+        x: boardWidth - grid * 3,
+        y: boardHeight / 2 - paddleHeight / 2,
         width: grid,
         height: paddleHeight,
         acceleratingUp: false,
@@ -128,7 +162,7 @@
       };
 
       function draw() {
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.clearRect(0, 0, boardWidth, boardHeight);
 
         moveBall();
         updatePlayerPaddleSpeed();
@@ -150,11 +184,11 @@
         );
 
         context.fillstyle = "lightgrey";
-        context.fillRect(0, 0, canvas.width, grid);
-        context.fillRect(0, canvas.height - grid, canvas.width, canvas.height);
+        context.fillRect(0, 0, boardWidth, grid);
+        context.fillRect(0, boardHeight - grid, boardWidth, boardHeight);
 
-        for (let i = grid; i < canvas.height - grid; i += grid * 2) {
-          context.fillRect(canvas.width / 2 - grid / 2, i, grid, grid);
+        for (let i = grid; i < boardHeight - grid; i += grid * 2) {
+          context.fillRect(boardWidth / 2 - grid / 2, i, grid, grid);
         }
         requestAnimationFrame(draw);
       }
@@ -186,7 +220,7 @@
         }
 
         // bounce horizontal boundaries
-        if (newY >= grid && newY <= canvas.height - 2 * grid) {
+        if (newY >= grid && newY <= boardHeight - 2 * grid) {
           ball.y = newY;
           ball.x = newX;
         } else {
@@ -199,15 +233,15 @@
           resetBall(1);
           return;
         }
-        if (newX > canvas.width - grid) {
+        if (newX > boardWidth - grid) {
           resetBall(-1);
           return;
         }
       }
 
       function resetBall(newDir) {
-        ball.x = canvas.width / 2;
-        ball.y = canvas.height / 2;
+        ball.x = boardWidth / 2;
+        ball.y = boardHeight / 2;
         ball.dy = 0;
         ball.dx = ballSpeed * newDir;
       }

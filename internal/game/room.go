@@ -33,9 +33,10 @@ const (
 type Seat bool
 
 type gameState struct {
-	Player1 PlayerState `json:"player1"`
-	Player2 PlayerState `json:"player2"`
-	Ball    Ball        `json:"ball"`
+	Player1      *Player `json:"player1"`
+	Player2      *Player `json:"player2"`
+	Ball         Ball    `json:"ball"`
+	ScoredPlayer *Player `json:"scoredPlayer"`
 }
 
 type Room struct {
@@ -121,14 +122,26 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 			if r.Status == ready {
 				r.Players[0].updatePosition()
 				r.Players[1].updatePosition()
-				r.Ball.move()
 
-				r.Broadcast <- gameState{Player1: r.Players[0].GetState(), Player2: r.Players[1].GetState(), Ball: *r.Ball}
+				var scoredPlayer *Player
+				if r.Ball.move() {
+					scoredPlayer = r.Ball.getScoredPlayer()
+					r.reset(scoredPlayer)
+				}
+
+				r.Broadcast <- gameState{Player1: r.Players[0], Player2: r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer}
 			}
 		case <-done:
 			return
 		}
 	}
+}
+
+func (r *Room) reset(scoredPlayer *Player) {
+	for i := range r.Players {
+		r.Players[i].reset()
+	}
+	r.Ball.reset(scoredPlayer)
 }
 
 func (r *Room) isEmpty() bool {

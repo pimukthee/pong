@@ -34,7 +34,12 @@ func NewBall(room *Room) *Ball {
 	}
 }
 
-func (ball *Ball) reset(dir int) {
+func (ball *Ball) reset(scoredPlayer *Player) {
+  dir := rightSpeed
+  if scoredPlayer.Seat == right {
+    dir = leftSpeed
+  }
+
 	ball.X = boardWidth / 2
 	ball.Y = boardHeight / 2
 	ball.Dx = ballSpeed * dir
@@ -63,13 +68,11 @@ func (ball *Ball) move() bool {
 
 	if newX < 0 {
 		ball.room.Players[1].Score++
-		ball.reset(leftSpeed)
 
 		return true
 	}
 	if newX > boardWidth-ball.width {
 		ball.room.Players[0].Score++
-		ball.reset(rightSpeed)
 
 		return true
 	}
@@ -87,6 +90,18 @@ func (ball *Ball) move() bool {
 	ball.Y = newY
 
 	return false
+}
+
+func (ball *Ball) getScoredPlayer() *Player {
+  newX := ball.X + ball.Dx
+  if newX < 0 {
+    return ball.room.Players[1]
+  }
+  if newX > boardWidth - ball.width {
+    return ball.room.Players[0]
+  }
+
+  return nil
 }
 
 func (ball *Ball) adjustSpeedAfterCollideWithPaddle(player *Player) {

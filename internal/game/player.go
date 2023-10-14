@@ -25,25 +25,18 @@ type Action struct {
 type PlayerID string
 
 type Player struct {
-	ID     PlayerID
-	Room   *Room
-	Conn   *websocket.Conn
-	Send   chan gameState
-	Action Action
-	Seat   Seat
-	width  int
-	height int
-	Score  int
-	X      int
-	Y      int
-	Dy     int
-}
-
-type PlayerState struct {
-	ID PlayerID `json:"id"`
-	X  int      `json:"x"`
-	Y  int      `json:"y"`
-	Dy int      `json:"dy"`
+	ID     PlayerID        `json:"id"`
+	Room   *Room           `json:"-"`
+	Conn   *websocket.Conn `json:"-"`
+	Send   chan gameState  `json:"-"`
+	Action Action          `json:"-"`
+	Seat   Seat            `json:"seat"`
+	width  int             `json:"-"`
+	height int             `json:"-"`
+	Score  int             `json:"score"`
+	X      int             `json:"x"`
+	Y      int             `json:"y"`
+	Dy     int             `json:"dy"`
 }
 
 func NewPlayer(room *Room, conn *websocket.Conn) *Player {
@@ -72,14 +65,11 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 	return player
 }
 
-func (p *Player) GetState() PlayerState {
-	return PlayerState{
-		ID: p.ID,
-		X:  p.X,
-		Y:  p.Y,
-		Dy: p.Dy,
-	}
+func (p *Player) reset() {
+	p.Y = boardHeight/2 - playerHeight/2
+	p.Dy = 0
 }
+
 func (p *Player) ReadAction() {
 	defer func() {
 		p.Room.Leave <- p
