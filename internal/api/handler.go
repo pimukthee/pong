@@ -57,6 +57,9 @@ func serveRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 func NewHandler(g *game.Game) *http.ServeMux {
 	handler := http.NewServeMux()
 
+  fs := http.FileServer(http.Dir("./web/"))
+  handler.Handle("/static/", http.StripPrefix("/static/", fs))
+
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
 		createRoom(g, w, r)
