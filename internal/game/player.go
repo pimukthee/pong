@@ -33,6 +33,7 @@ type Player struct {
 	Seat   Seat
 	width  int
 	height int
+	Score  int
 	X      int
 	Y      int
 	Dy     int

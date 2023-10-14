@@ -7,6 +7,9 @@ import (
 const (
 	ballSpeed      = 10
 	maxBounceAngle = 5 * math.Pi / 12
+
+	leftSpeed  = -1
+	rightSpeed = 1
 )
 
 type Ball struct {
@@ -31,7 +34,14 @@ func NewBall(room *Room) *Ball {
 	}
 }
 
-func (ball *Ball) move() {
+func (ball *Ball) reset(dir int) {
+	ball.X = boardWidth / 2
+	ball.Y = boardHeight / 2
+	ball.Dx = ballSpeed * dir
+	ball.Dy = 0
+}
+
+func (ball *Ball) move() bool {
 	newY := ball.Y + ball.Dy
 	newX := ball.X + ball.Dx
 
@@ -39,16 +49,29 @@ func (ball *Ball) move() {
 	player2 := ball.room.Players[1]
 
 	if ball.checkCollision(player1) {
-    ball.adjustSpeedAfterCollideWithPaddle(player1)
+		ball.adjustSpeedAfterCollideWithPaddle(player1)
 		ball.X = player1.X + player1.width
 
-		return
+		return false
 	}
 	if ball.checkCollision(player2) {
-    ball.adjustSpeedAfterCollideWithPaddle(player2)
+		ball.adjustSpeedAfterCollideWithPaddle(player2)
 		ball.X = player2.X - ball.width
 
-		return
+		return false
+	}
+
+	if newX < 0 {
+		ball.room.Players[1].Score++
+		ball.reset(leftSpeed)
+
+		return true
+	}
+	if newX > boardWidth-ball.width {
+		ball.room.Players[0].Score++
+		ball.reset(rightSpeed)
+
+		return true
 	}
 
 	// bounce horizontal boundaries
@@ -60,14 +83,10 @@ func (ball *Ball) move() {
 		ball.X = newX
 	}
 
-	// bounce vertical boundaries
-	if newX >= 0 && newX <= boardWidth-grid {
-		ball.Y = newY
-		ball.X = newX
-	} else {
-		ball.Dx *= -1
-		ball.Y = newY
-	}
+	ball.X = newX
+	ball.Y = newY
+
+	return false
 }
 
 func (ball *Ball) adjustSpeedAfterCollideWithPaddle(player *Player) {

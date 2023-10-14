@@ -13,12 +13,20 @@
       body {
         background: black;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+      }
+
+      #score {
+        color: white;
+        margin-bottom: 20px;
+        font-size: 99px;
       }
     </style>
   </head>
   <body>
+    <div id="score">0 : 1</div>
     <canvas width="750" height="585" id="game"></canvas>
     <script>
       var conn;
@@ -187,13 +195,21 @@
         }
 
         // bounce vertical boundaries
-        if (newX >= 0 && newX <= canvas.width - grid) {
-          ball.y = newY;
-          ball.x = newX;
-        } else {
-          ball.dx *= -1;
-          ball.y = newY;
+        if (newX < 0) {
+          resetBall(1);
+          return;
         }
+        if (newX > canvas.width - grid) {
+          resetBall(-1);
+          return;
+        }
+      }
+
+      function resetBall(newDir) {
+        ball.x = canvas.width / 2;
+        ball.y = canvas.height / 2;
+        ball.dy = 0;
+        ball.dx = ballSpeed * newDir;
       }
 
       function calculateBounceAngle(ball, paddle) {
