@@ -75,6 +75,7 @@
       const context = canvas.getContext("2d");
       const grid = 15;
       const paddleHeight = grid * 5;
+      const maxBounceAngle = 5*Math.PI / 12
       const maxPaddleY = canvas.height - grid - paddleHeight;
       const Arrows = {
         Up: 38,
@@ -82,13 +83,13 @@
       };
       const acceleration = 3;
       const maxSpeed = 6;
-      const ballSpeed = 5;
+      const ballSpeed = 10;
 
       const ball = {
         x: canvas.width / 2,
         y: canvas.height / 2,
         dx: -ballSpeed,
-        dy: 3,
+        dy: 0,
         width: grid,
         height: grid,
       };
@@ -148,15 +149,24 @@
         const newX = ball.x + ball.dx;
 
         if (checkCollision(ball, playerPaddle)) {
-          ball.dx *= -1;
+          const bounceAngle = calculateBounceAngle(ball, playerPaddle)
+          ball.dx = ~~(ballSpeed * Math.cos(bounceAngle))
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle))
+
+          ball.dx = correctXVelocity(ball.dx, seat)
           ball.x = correctPositionAfterCollided(ball, playerPaddle, seat);
 
           return;
         }
 
         if (checkCollision(ball, opponentPaddle)) {
-          ball.dx *= -1;
+          const bounceAngle = calculateBounceAngle(ball, opponentPaddle)
+          ball.dx = ~~(ballSpeed * -Math.cos(bounceAngle))
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle))
+
+          ball.dx = correctXVelocity(ball.dx, !seat)
           ball.x = correctPositionAfterCollided(ball, opponentPaddle, !seat);
+
           return;
         }
 
@@ -177,6 +187,23 @@
           ball.dx *= -1;
           ball.y = newY;
         }
+      }
+
+      function calculateBounceAngle(ball, paddle) {
+        const relativeIntersectY = (paddle.y + paddle.height/2) - (ball.y + ball.height / 2)
+        const normalized = relativeIntersectY / (paddle.height / 2)
+
+        return normalized * maxBounceAngle
+      }
+      
+      function correctXVelocity(dx, side) {
+        if (dx != 0) return dx;
+
+        if (side) {
+          return -1;
+        }
+
+        return 1;
       }
 
       function correctPositionAfterCollided(ball, paddle, side) {
