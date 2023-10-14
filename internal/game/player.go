@@ -18,8 +18,9 @@ const (
 )
 
 type Action struct {
-	Up   bool `json:"up"`
-	Down bool `json:"down"`
+	Up    bool `json:"up"`
+	Down  bool `json:"down"`
+	Start bool `json:"start"`
 }
 
 type PlayerID string
@@ -70,6 +71,10 @@ func (p *Player) reset() {
 	p.Dy = 0
 }
 
+func (p *Player) isMaxScoreReached() bool {
+  return p.Score >= maxScore
+}
+
 func (p *Player) ReadAction() {
 	defer func() {
 		p.Room.Leave <- p
@@ -90,6 +95,13 @@ func (p *Player) ReadAction() {
 				log.Printf("error: %v", err)
 			}
 			break
+		}
+
+		if p.Action.Start && (p.Room.Status == ready || p.Room.Status == pause) {
+			if p.Room.Status == ready {
+				p.Room.pause <- struct{}{}
+			}
+			p.Room.Status = start
 		}
 	}
 }
@@ -112,11 +124,11 @@ func (p *Player) WritePump() {
 			}
 
 			err := p.Conn.WriteJSON(msg)
-
 			if err != nil {
 				log.Println(err)
 				return
 			}
+
 		case <-ticker.C:
 			p.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := p.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {

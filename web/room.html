@@ -3,7 +3,7 @@
   <head>
     <title>Pong</title>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" type="text/css" href="/static/css/main.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/main.css" />
   </head>
   <body>
     <div id="score">
@@ -54,6 +54,11 @@
 
             return;
           }
+          if (msg.type === "finish") {
+            player = msg.data;
+            setTimeout(alertWinner, 100, player)
+            return;
+          }
           if (msg.type === "update") {
             const scoredPlayer = msg.data.scoredPlayer;
             if (scoredPlayer) {
@@ -68,6 +73,14 @@
         };
       } else {
         alert("Your browser does not support WebSockets.");
+      }
+
+      function alertWinner(player) {
+        if (player.seat) {
+          alert("Player 2 won");
+        } else {
+          alert("Player 1 won");
+        }
       }
 
       function initGame(data) {
@@ -126,9 +139,10 @@
       const boardWidth = canvas.width;
       const maxBounceAngle = (5 * Math.PI) / 12;
       const maxPaddleY = boardHeight - grid - paddleHeight;
-      const Arrows = {
+      const Keys = {
         Up: 38,
         Down: 40,
+        Spacebar: 32,
       };
       const acceleration = 3;
       const maxSpeed = 6;
@@ -149,6 +163,7 @@
         height: paddleHeight,
         acceleratingUp: false,
         acceleratingDown: false,
+        start: false,
         dy: 0,
       };
       const rightPaddle = {
@@ -158,13 +173,14 @@
         height: paddleHeight,
         acceleratingUp: false,
         acceleratingDown: false,
+        start: false,
         dy: 0,
       };
 
       function draw() {
         context.clearRect(0, 0, boardWidth, boardHeight);
 
-        moveBall();
+        // moveBall();
         updatePlayerPaddleSpeed();
         movePlayerPaddle();
 
@@ -288,12 +304,15 @@
       }
 
       document.addEventListener("keydown", function (e) {
-        if (e.which === Arrows.Up) {
+        if (e.which == Keys.Spacebar) {
+          playerPaddle.start = true;
+          sendAction();
+        } else if (e.which === Keys.Up) {
           if (!playerPaddle.acceleratingUp) {
             playerPaddle.acceleratingUp = true;
             sendAction();
           }
-        } else if (e.which == Arrows.Down) {
+        } else if (e.which == Keys.Down) {
           if (!playerPaddle.acceleratingDown) {
             playerPaddle.acceleratingDown = true;
             sendAction();
@@ -302,12 +321,14 @@
       });
 
       document.addEventListener("keyup", function (e) {
-        if (e.which == Arrows.Up) {
+        if (e.which == Keys.Spacebar) {
+          playerPaddle.start = false;
+        } else if (e.which == Keys.Up) {
           if (playerPaddle.acceleratingUp) {
             playerPaddle.acceleratingUp = false;
             sendAction();
           }
-        } else if (e.which == Arrows.Down) {
+        } else if (e.which == Keys.Down) {
           if (playerPaddle.acceleratingDown) {
             playerPaddle.acceleratingDown = false;
             sendAction();
@@ -349,6 +370,7 @@
           JSON.stringify({
             up: playerPaddle.acceleratingUp,
             down: playerPaddle.acceleratingDown,
+            start: playerPaddle.start,
           }),
         );
       }

@@ -8,6 +8,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+  maxScore = 5
+)
+
 type RoomID string
 
 type Game struct {

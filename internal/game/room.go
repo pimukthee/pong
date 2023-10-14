@@ -13,6 +13,7 @@ const (
 	waiting
 	ready
 	start
+	pause
 	finish
 )
 
@@ -48,6 +49,8 @@ type Room struct {
 	Broadcast    chan Message
 	Join         chan *Player
 	Leave        chan *Player
+	pause        chan struct{}
+	done         chan struct{}
 }
 
 func NewRoom() *Room {
@@ -57,6 +60,8 @@ func NewRoom() *Room {
 		Broadcast: make(chan Message),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
+		pause:     make(chan struct{}),
+		done:      make(chan struct{}),
 	}
 	room.Ball = NewBall(&room)
 
@@ -73,18 +78,12 @@ func (r *Room) Run(ctx context.Context) {
 		fmt.Println("clear room")
 	}(ctx.Value("game").(map[RoomID]*Room), r.ID)
 
-	done := make(chan struct{})
-	begin := make(chan struct{})
-
-	go r.updateState(begin, done)
+	go r.updateState()
 
 	for loop := true; loop; {
 		select {
 		case player := <-r.Join:
 			r.addPlayer(player)
-			if r.Status == ready {
-				begin <- struct{}{}
-			}
 
 		case player := <-r.Leave:
 			r.removePlayer(player)
@@ -103,25 +102,27 @@ func (r *Room) Run(ctx context.Context) {
 			}
 		}
 	}
-	done <- struct{}{}
+	r.done <- struct{}{}
 }
 
-func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
+func (r *Room) updateState() {
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
-	<-begin
+	<-r.pause
 
 	for {
 		select {
 		case <-ticker.C:
-			if r.Status == ready {
+			if r.Status == start {
 				r.Players[0].updatePosition()
 				r.Players[1].updatePosition()
 
 				var scoredPlayer *Player
+        var shouldEnd bool
 				if r.Ball.move() {
 					scoredPlayer = r.Ball.getScoredPlayer()
+          shouldEnd = r.shouldEnd(scoredPlayer)
 					r.reset(scoredPlayer)
 				}
 
@@ -131,14 +132,34 @@ func (r *Room) updateState(begin chan struct{}, done chan struct{}) {
 				}
 
 				r.Broadcast <- msg
+
+        if shouldEnd {
+          r.endRound(scoredPlayer) 
+        }
+
 			}
-		case <-done:
+		case <-r.done:
 			return
 		}
 	}
 }
 
+func (r *Room) shouldEnd(scoredPlayer *Player) bool {
+  return scoredPlayer.isMaxScoreReached()
+} 
+
+func (r *Room) endRound(winner *Player) {
+  r.Status = finish
+
+  msg := Message {
+    Type: "finish",
+    Data: winner, 
+  }
+  r.Broadcast <-msg
+}
+
 func (r *Room) reset(scoredPlayer *Player) {
+	r.Status = pause
 	for i := range r.Players {
 		r.Players[i].reset()
 	}
