@@ -52,3 +52,13 @@ body {
 .arrow {
   font-size: 36px;
 }
+#players {
+  display: flex;
+  justify-content: space-between;
+  width: 750px;
+}
+
+.player-label {
+  color: white;
+  font-size: 18px;
+}

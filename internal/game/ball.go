@@ -25,8 +25,8 @@ type Ball struct {
 func NewBall(room *Room) *Ball {
 	return &Ball{
 		room:   room,
-		X:      boardWidth / 2,
-		Y:      boardHeight / 2,
+		X:      boardWidth / 2 - grid / 2,
+		Y:      boardHeight / 2 - grid / 2,
 		Dx:     -ballSpeed,
 		Dy:     0,
 		width:  grid,
@@ -40,8 +40,8 @@ func (ball *Ball) reset(scoredPlayer *Player) {
     dir = leftSpeed
   }
 
-	ball.X = boardWidth / 2
-	ball.Y = boardHeight / 2
+	ball.X = boardWidth / 2 - ball.width / 2
+	ball.Y = boardHeight / 2 - ball.height / 2
 	ball.Dx = ballSpeed * dir
 	ball.Dy = 0
 }

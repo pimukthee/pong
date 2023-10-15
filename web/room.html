@@ -7,9 +7,12 @@
   </head>
   <body>
     <div id="score">
-      <span id="left-player">0</span> : <span id="right-player">0</span>
+      <span id="left-player-score">0</span> : <span id="right-player-score">0</span>
     </div>
-    <canvas width="750" height="585" id="game"></canvas>
+    <div id="players">
+      <div class="player-label" id="left-player">You</div>
+      <div class="player-label" id="right-player">Opponent</div>
+    </div><canvas width="750" height="585" id="game"></canvas>
     <div id="instructions">
       <div class="button-container">
         <div class="button">
@@ -90,6 +93,9 @@
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
 
+        document.getElementById("left-player").innerHTML = seat ? "Opponent" : "You";
+        document.getElementById("right-player").innerHTML = seat ? "You" : "Opponent";
+
         draw();
       }
 
@@ -97,8 +103,8 @@
         const player1 = state.player1;
         const player2 = state.player2;
 
-        document.getElementById("left-player").innerHTML = player1.score;
-        document.getElementById("right-player").innerHTML = player2.score;
+        document.getElementById("left-player-score").innerHTML = player1.score;
+        document.getElementById("right-player-score").innerHTML = player2.score;
       }
 
       function resetGame(scoredPlayer) {
@@ -111,8 +117,8 @@
         leftPaddle.y = boardHeight / 2 - paddleHeight / 2;
         rightPaddle.dy = 0;
         rightPaddle.y = boardHeight / 2 - paddleHeight / 2;
-        ball.y = boardHeight / 2;
-        ball.x = boardWidth / 2;
+        ball.y = boardHeight / 2 - ball.width / 2;
+        ball.x = boardWidth / 2 - ball.height / 2;
         ball.dx = ballSpeed * dir;
         ball.dy = 0;
       }
@@ -149,8 +155,8 @@
       const ballSpeed = 10;
 
       const ball = {
-        x: boardWidth / 2,
-        y: boardHeight / 2,
+        x: boardWidth / 2 - grid / 2,
+        y: boardHeight / 2 - grid /2,
         dx: -ballSpeed,
         dy: 0,
         width: grid,
