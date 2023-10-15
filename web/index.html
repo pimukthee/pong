@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Pong</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/index.css" />
+  </head>
+  <body>
+    <div class="canvas-container">
+      <canvas id="game" width="750" height="585"></canvas>
+    </div>
+    <div class="button-container">
+      <form action="create-room" method="POST">
+        <button type="submit">Create Room</button>
+      </form>
+      <form action="quick-join" method="POST">
+        <button type="submit">Quick Join</button>
+      </form>
+    </div>
+  </body>
+  <script>
+    const canvas = document.getElementById("game");
+    const context = canvas.getContext("2d");
+    const boardHeight = canvas.height;
+    const boardWidth = canvas.width;
+    const grid = 15;
+
+    const ball = {
+      dy: 3,
+      dx: 6,
+      y: boardHeight / 2 - grid / 2,
+      x: boardWidth / 2 - grid / 2,
+      width: grid,
+      height: grid,
+    };
+
+    function draw() {
+      context.clearRect(0, 0, boardWidth, boardHeight);
+
+      moveBall();
+
+      context.fillStyle = "white";
+      context.fillRect(ball.x, ball.y, ball.width, ball.height);
+
+      context.fillstyle = "lightgrey";
+      context.fillRect(0, 0, boardWidth, grid);
+      context.fillRect(0, boardHeight - grid, boardWidth, boardHeight);
+
+      for (let i = grid; i < boardHeight - grid; i += grid * 2) {
+        context.fillRect(boardWidth / 2 - grid / 2, i, grid, grid);
+      }
+
+      function moveBall() {
+        const newY = ball.y + ball.dy;
+        const newX = ball.x + ball.dx;
+
+        // bounce horizontal boundaries
+        if (newY >= grid && newY <= canvas.height - 2 * grid) {
+          ball.y = newY;
+          ball.x = newX;
+        } else {
+          ball.dy *= -1;
+          ball.x = newX;
+        }
+
+        // bounce vertical boundaries
+        if (newX >= 0 && newX <= canvas.width - grid) {
+          ball.y = newY;
+          ball.x = newX;
+        } else {
+          ball.dx *= -1;
+          ball.y = newY;
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</html>

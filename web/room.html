@@ -1,0 +1,422 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Pong</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" type="text/css" href="/static/css/main.css" />
+  </head>
+  <body>
+    <div id="score">
+      <span id="left-player-score">0</span> :
+      <span id="right-player-score">0</span>
+    </div>
+
+    <div id="players">
+      <div class="player-label" id="left-player">You</div>
+      <div class="player-label" id="room-status">Waiting</div>
+      <div class="player-label" id="right-player">Opponent</div>
+    </div>
+
+    <div class="modal" id="myModal">
+      <div class="modal-content">
+        <p id="winner">Game Over</p>
+        <div class="modal-button-container">
+          <button id="exitButton">Exit</button>
+          <button id="replayButton">Replay</button>
+        </div>
+      </div>
+    </div>
+
+    <canvas width="750" height="585" id="game"></canvas>
+
+    <div id="instructions">
+      <div class="button-container">
+        <div class="button">
+          <div class="arrow">&#8593;</div>
+        </div>
+        <div class="text">Move up</div>
+      </div>
+      <div class="button-container">
+        <div class="button">
+          <div class="arrow">&#8595;</div>
+        </div>
+        <div class="text">Move Down</div>
+      </div>
+      <div class="button-container">
+        <div class="button">
+          <div class="text">Space bar</div>
+        </div>
+        <div class="text">Start</div>
+      </div>
+    </div>
+
+    <script src="/static/js/modal.js"></script>
+    <script>
+      var conn;
+      var id;
+      var seat; // false is left true is right
+      var playerPaddle;
+      var opponentPaddle;
+
+      if (window["WebSocket"]) {
+        pathnames = window.location.pathname.split("/");
+        roomId = pathnames.pop() || pathnames.pop();
+        conn = new WebSocket(
+          "ws://" + document.location.host + "/ws/" + roomId,
+        );
+        conn.onclose = function (evt) {
+          console.log("player left");
+        };
+        conn.onmessage = function (evt) {
+          msg = JSON.parse(evt.data);
+
+          if (msg.type === "init") {
+            initGame(msg.data);
+
+            return;
+          }
+          if (msg.type == "leave") {
+            alert("Opponent has left");
+            resetBall(-1);
+            document.getElementById("room-status").innerHTML = "Waiting";
+            return;
+          }
+          if (msg.type == "ready") {
+            alert("Player has joined. Press Space bar to start");
+            document.getElementById("room-status").innerHTML = "Ready";
+            return;
+          }
+          if (msg.type === "finish") {
+            player = msg.data;
+            setTimeout(showGameOverModal, 100, player, seat);
+            return;
+          }
+          if (msg.type == "replay") {
+            hideGameOverModal();
+            resetScore();
+            return;
+          }
+          if (msg.type === "update") {
+            document.getElementById("room-status").innerHTML = "Playing";
+            const scoredPlayer = msg.data.scoredPlayer;
+            if (scoredPlayer) {
+              updateScore(msg.data);
+              resetGame(scoredPlayer);
+              return;
+            }
+            syncServer(msg.data);
+
+            return;
+          }
+        };
+      } else {
+        alert("Your browser does not support WebSockets.");
+      }
+
+      function initGame(data) {
+        id = data.id;
+        seat = data.seat;
+
+        playerPaddle = seat ? rightPaddle : leftPaddle;
+        opponentPaddle = seat ? leftPaddle : rightPaddle;
+
+        document.getElementById("left-player").innerHTML = seat
+          ? "Opponent"
+          : "You";
+        document.getElementById("right-player").innerHTML = seat
+          ? "You"
+          : "Opponent";
+
+        draw();
+      }
+
+      function updateScore(state) {
+        const player1 = state.player1;
+        const player2 = state.player2;
+
+        document.getElementById("left-player-score").innerHTML = player1.score;
+        document.getElementById("right-player-score").innerHTML = player2.score;
+      }
+
+      function resetScore() {
+        document.getElementById("left-player-score").innerHTML = 0;
+        document.getElementById("right-player-score").innerHTML = 0;
+      }
+
+      function resetGame(scoredPlayer) {
+        let dir = 1;
+        if (scoredPlayer.seat) {
+          dir = -1;
+        }
+
+        leftPaddle.dy = 0;
+        leftPaddle.y = boardHeight / 2 - paddleHeight / 2;
+        rightPaddle.dy = 0;
+        rightPaddle.y = boardHeight / 2 - paddleHeight / 2;
+        ball.y = boardHeight / 2 - ball.width / 2;
+        ball.x = boardWidth / 2 - ball.height / 2;
+        ball.dx = ballSpeed * dir;
+        ball.dy = 0;
+      }
+
+      function syncServer(state) {
+        leftPaddle.dy = state.player1.dy;
+        leftPaddle.y = state.player1.y;
+        rightPaddle.y = state.player2.y;
+        rightPaddle.dy = state.player2.dy;
+        ball.y = state.ball.y;
+        ball.x = state.ball.x;
+        ball.dy = state.ball.dy;
+        ball.dx = state.ball.dx;
+
+        playerPaddle = seat ? rightPaddle : leftPaddle;
+        opponentPaddle = seat ? leftPaddle : rightPaddle;
+      }
+
+      const canvas = document.getElementById("game");
+      const context = canvas.getContext("2d");
+      const grid = 15;
+      const paddleHeight = grid * 5;
+      const boardHeight = canvas.height;
+      const boardWidth = canvas.width;
+      const maxBounceAngle = (5 * Math.PI) / 12;
+      const maxPaddleY = boardHeight - grid - paddleHeight;
+      const Keys = {
+        Up: 38,
+        Down: 40,
+        Spacebar: 32,
+      };
+      const acceleration = 3;
+      const maxSpeed = 6;
+      const ballSpeed = 10;
+
+      const ball = {
+        x: boardWidth / 2 - grid / 2,
+        y: boardHeight / 2 - grid / 2,
+        dx: -ballSpeed,
+        dy: 0,
+        width: grid,
+        height: grid,
+      };
+      const leftPaddle = {
+        x: grid * 2,
+        y: boardHeight / 2 - paddleHeight / 2, // top of the paddle
+        width: grid,
+        height: paddleHeight,
+        acceleratingUp: false,
+        acceleratingDown: false,
+        start: false,
+        dy: 0,
+      };
+      const rightPaddle = {
+        x: boardWidth - grid * 3,
+        y: boardHeight / 2 - paddleHeight / 2,
+        width: grid,
+        height: paddleHeight,
+        acceleratingUp: false,
+        acceleratingDown: false,
+        start: false,
+        dy: 0,
+      };
+
+      function draw() {
+        context.clearRect(0, 0, boardWidth, boardHeight);
+
+        // moveBall();
+        updatePlayerPaddleSpeed();
+        movePlayerPaddle();
+
+        context.fillStyle = "white";
+        context.fillRect(ball.x, ball.y, ball.width, ball.height);
+        context.fillRect(
+          playerPaddle.x,
+          playerPaddle.y,
+          playerPaddle.width,
+          playerPaddle.height,
+        );
+        context.fillRect(
+          opponentPaddle.x,
+          opponentPaddle.y,
+          opponentPaddle.width,
+          opponentPaddle.height,
+        );
+
+        context.fillstyle = "lightgrey";
+        context.fillRect(0, 0, boardWidth, grid);
+        context.fillRect(0, boardHeight - grid, boardWidth, boardHeight);
+
+        for (let i = grid; i < boardHeight - grid; i += grid * 2) {
+          context.fillRect(boardWidth / 2 - grid / 2, i, grid, grid);
+        }
+        requestAnimationFrame(draw);
+      }
+
+      function moveBall() {
+        const newY = ball.y + ball.dy;
+        const newX = ball.x + ball.dx;
+
+        if (checkCollision(ball, playerPaddle)) {
+          const bounceAngle = calculateBounceAngle(ball, playerPaddle);
+          ball.dx = ~~(ballSpeed * Math.cos(bounceAngle));
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle));
+
+          ball.dx = correctXVelocity(ball.dx, seat);
+          ball.x = correctPositionAfterCollided(ball, playerPaddle, seat);
+
+          return;
+        }
+
+        if (checkCollision(ball, opponentPaddle)) {
+          const bounceAngle = calculateBounceAngle(ball, opponentPaddle);
+          ball.dx = ~~(ballSpeed * -Math.cos(bounceAngle));
+          ball.dy = ~~(ballSpeed * -Math.sin(bounceAngle));
+
+          ball.dx = correctXVelocity(ball.dx, !seat);
+          ball.x = correctPositionAfterCollided(ball, opponentPaddle, !seat);
+
+          return;
+        }
+
+        // bounce horizontal boundaries
+        if (newY >= grid && newY <= boardHeight - 2 * grid) {
+          ball.y = newY;
+          ball.x = newX;
+        } else {
+          ball.dy *= -1;
+          ball.x = newX;
+        }
+
+        // bounce vertical boundaries
+        if (newX < 0) {
+          resetBall(1);
+          return;
+        }
+        if (newX > boardWidth - grid) {
+          resetBall(-1);
+          return;
+        }
+      }
+
+      function resetBall(newDir) {
+        ball.x = boardWidth / 2 - ball.width / 2;
+        ball.y = boardHeight / 2 - ball.height / 2;
+        ball.dy = 0;
+        ball.dx = ballSpeed * newDir;
+      }
+
+      function calculateBounceAngle(ball, paddle) {
+        const relativeIntersectY =
+          paddle.y + paddle.height / 2 - (ball.y + ball.height / 2);
+        const normalized = relativeIntersectY / (paddle.height / 2);
+
+        return normalized * maxBounceAngle;
+      }
+
+      function correctXVelocity(dx, side) {
+        if (dx != 0) return dx;
+
+        if (side) {
+          return -1;
+        }
+
+        return 1;
+      }
+
+      function correctPositionAfterCollided(ball, paddle, side) {
+        if (side) {
+          // right
+          return paddle.x - ball.width;
+        }
+        return paddle.x + paddle.width;
+      }
+
+      function getPlayers(action) {
+        if (action.player1.id === id) {
+          return [action.player1, action.player2];
+        }
+
+        return [action.player2, action.player1];
+      }
+
+      function movePlayerPaddle() {
+        const newY = playerPaddle.y + playerPaddle.dy;
+        if (newY <= maxPaddleY && newY >= grid) {
+          playerPaddle.y = newY;
+        }
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if (e.which == Keys.Spacebar) {
+          playerPaddle.start = true;
+          sendAction();
+        } else if (e.which === Keys.Up) {
+          if (!playerPaddle.acceleratingUp) {
+            playerPaddle.acceleratingUp = true;
+            sendAction();
+          }
+        } else if (e.which == Keys.Down) {
+          if (!playerPaddle.acceleratingDown) {
+            playerPaddle.acceleratingDown = true;
+            sendAction();
+          }
+        }
+      });
+
+      document.addEventListener("keyup", function (e) {
+        if (e.which == Keys.Spacebar) {
+          playerPaddle.start = false;
+        } else if (e.which == Keys.Up) {
+          if (playerPaddle.acceleratingUp) {
+            playerPaddle.acceleratingUp = false;
+            sendAction();
+          }
+        } else if (e.which == Keys.Down) {
+          if (playerPaddle.acceleratingDown) {
+            playerPaddle.acceleratingDown = false;
+            sendAction();
+          }
+        }
+      });
+
+      function updatePlayerPaddleSpeed() {
+        if (playerPaddle.acceleratingUp && !playerPaddle.acceleratingDown) {
+          playerPaddle.dy = Math.max(-maxSpeed, playerPaddle.dy - acceleration);
+        } else if (
+          playerPaddle.acceleratingDown &&
+          !playerPaddle.acceleratingUp
+        ) {
+          playerPaddle.dy = Math.min(maxSpeed, playerPaddle.dy + acceleration);
+        } else if (
+          !playerPaddle.acceleratingUp &&
+          !playerPaddle.acceleratingDown
+        ) {
+          if (playerPaddle.dy > 0) {
+            playerPaddle.dy -= acceleration;
+          } else if (playerPaddle.dy < 0) {
+            playerPaddle.dy += acceleration;
+          }
+        }
+      }
+
+      function checkCollision(ball, paddle) {
+        return (
+          ball.x < paddle.x + paddle.width &&
+          ball.x + ball.width > paddle.x &&
+          ball.y < paddle.y + paddle.height &&
+          ball.y + ball.height > paddle.y
+        );
+      }
+
+      function sendAction() {
+        conn.send(
+          JSON.stringify({
+            up: playerPaddle.acceleratingUp,
+            down: playerPaddle.acceleratingDown,
+            start: playerPaddle.start,
+            replay: false,
+          }),
+        );
+      }
+    </script>
+  </body>
+</html>
