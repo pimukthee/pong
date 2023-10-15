@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path"
@@ -23,10 +22,11 @@ func createRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	room := game.NewRoom()
+	room := game.NewRoom(g)
 	g.Rooms[room.ID] = room
-	c := context.WithValue(context.Background(), "game", g.Rooms)
-	go room.Run(c)
+	g.Available[room.ID] = true
+
+	go room.Run()
 
 	newUrl := fmt.Sprintf("/rooms/%s", room.ID)
 
@@ -54,13 +54,33 @@ func serveRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/room.html")
 }
 
+func quickJoin(g *game.Game, w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	roomID, found := g.FindAvailableRoom()
+	if !found {
+		http.Error(w, "No rooms are currently available.", http.StatusNotFound)
+		return
+	}
+
+	newUrl := fmt.Sprintf("/rooms/%s", roomID)
+
+	http.Redirect(w, r, newUrl, http.StatusSeeOther)
+}
+
 func NewHandler(g *game.Game) *http.ServeMux {
 	handler := http.NewServeMux()
 
-  fs := http.FileServer(http.Dir("./web/"))
-  handler.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("./web/"))
+	handler.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	handler.HandleFunc("/", serveHome)
+	handler.HandleFunc("/quick-join", func(w http.ResponseWriter, r *http.Request) {
+		quickJoin(g, w, r)
+	})
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
 		createRoom(g, w, r)
 	})

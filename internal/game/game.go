@@ -16,8 +16,8 @@ type RoomID string
 
 type Game struct {
 	Rooms     map[RoomID]*Room
-	available []RoomID
-}
+	Available map[RoomID]bool
+ }
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -37,7 +37,18 @@ type InitMessage struct {
 func NewGame() *Game {
 	return &Game{
 		Rooms: make(map[RoomID]*Room),
+    Available: make(map[RoomID]bool),
 	}
+}
+
+func (g *Game) FindAvailableRoom() (RoomID, bool) {
+  for roomID := range g.Available {
+    if g.Available[roomID] {
+      return roomID, true
+    }  
+  }
+
+  return "", false
 }
 
 func ServeWs(g *Game, w http.ResponseWriter, r *http.Request) {

@@ -1,7 +1,6 @@
 package game
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -51,9 +50,10 @@ type Room struct {
 	Leave        chan *Player
 	pause        chan struct{}
 	done         chan struct{}
+	game         *Game
 }
 
-func NewRoom() *Room {
+func NewRoom(g *Game) *Room {
 	room := Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
@@ -62,6 +62,7 @@ func NewRoom() *Room {
 		Leave:     make(chan *Player),
 		pause:     make(chan struct{}),
 		done:      make(chan struct{}),
+		game:      g,
 	}
 	room.Ball = NewBall(&room)
 
@@ -72,11 +73,12 @@ func (r *Room) IsWaiting() bool {
 	return r.Status == waiting
 }
 
-func (r *Room) Run(ctx context.Context) {
-	defer func(rooms map[RoomID]*Room, roomId RoomID) {
-		delete(rooms, roomId)
+func (r *Room) Run() {
+	defer func() {
+		delete(r.game.Rooms, r.ID)
+		delete(r.game.Available, r.ID)
 		fmt.Println("clear room")
-	}(ctx.Value("game").(map[RoomID]*Room), r.ID)
+	}()
 
 	go r.updateState()
 
@@ -93,9 +95,9 @@ func (r *Room) Run(ctx context.Context) {
 		case message := <-r.Broadcast:
 			players := r.Players[:]
 			for i := range players {
-        if players[i] == nil {
-          continue
-        }
+				if players[i] == nil {
+					continue
+				}
 				select {
 				case players[i].Send <- message:
 				default:
@@ -183,6 +185,7 @@ func (r *Room) addPlayer(p *Player) {
 	r.Players[i] = p
 
 	if r.PlayersCount == 2 {
+		r.game.Available[r.ID] = false
 		r.Status = ready
 		r.Broadcast <- Message{
 			Type: "ready",
@@ -207,9 +210,11 @@ func (r *Room) removePlayer(p *Player) {
 		r.Players[1] = nil
 	}
 
-  r.Broadcast <- Message {
-    Type: "leave",
-  }
+	r.Broadcast <- Message{
+		Type: "leave",
+	}
 
-  r.Status = waiting
+	r.game.Available[r.ID] = true
+
+	r.Status = waiting
 }
