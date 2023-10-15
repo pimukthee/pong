@@ -8,13 +8,19 @@
     <div class="canvas-container">
       <canvas id="game" width="750" height="585"></canvas>
     </div>
-    <div class="button-container">
-      <form action="create-room" method="POST">
-        <button type="submit">Create Room</button>
-      </form>
-      <form action="quick-play" method="POST">
-        <button type="submit">Quick Play</button>
-      </form>
+    <div class="form-container">
+      <div class="button-container">
+        <form action="quick-play" method="POST">
+          <button type="submit">Quick Play</button>
+        </form>
+        <form action="create-private-room" method="POST">
+          <button type="submit">Create Private Room</button>
+        </form>
+      </div>
+      <div class="join-room-container">
+        <input type="text" id="room-id-input" placeholder="ROOM ID" />
+        <button type="submit" id="join-room">JOIN</button>
+      </div>
     </div>
   </body>
   <script>

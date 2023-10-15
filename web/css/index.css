@@ -20,29 +20,59 @@ canvas {
   z-index: -1;
 }
 
-.button-container {
+.form-container {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.button-container {
+  display: flex;
+  align-items: center;
+}
+
+.join-room-container {
+  display: flex;
+  align-items: center;
+  margin-top: 10px; /* Add some top margin for spacing */
+}
+
+input[type="text"] {
+  width: 100%;
+  background-color: #333; /* Background color */
+  color: white; /* Text color */
+  padding: 10px; /* Padding around the input */
+  border: 2px solid #666; /* Border style */
+  border-radius: 5px; /* Rounded corners */
+  font-size: 20px; /* Font size */
+}
+
+input[type="text"]::placeholder {
+  color: #999; /* Placeholder text color */
+}
+
+#join-room {
+  margin-left: 10px;
 }
 
 form {
   display: inline;
 }
 
-button[type="submit"] {
+button {
   background-color: #333;
   color: white;
   padding: 10px 20px;
   border: 2px solid #666;
-  border-radius: 5px;
+  border-radius: 20px; /* Increase border-radius for a more curved look */
   font-size: 24px;
   cursor: pointer;
+  box-shadow: 2px 2px 3px rgba(128, 128, 128, 0.5);
 }
 
-button[type="submit"]:hover {
+button:hover {
   background-color: #555;
 }
 

@@ -16,15 +16,14 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/index.html")
 }
 
-func createRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
+func createPrivateRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	room := game.NewRoom(g)
+	room := game.NewRoom(g, true)
 	g.Rooms[room.ID] = room
-	g.Available[room.ID] = true
 
 	go room.Run()
 
@@ -63,7 +62,7 @@ func quickPlay(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	roomID, found := g.FindAvailableRoom()
 	newUrl := fmt.Sprintf("/rooms/%s", roomID)
 	if !found {
-		room := game.NewRoom(g)
+		room := game.NewRoom(g, false)
 		g.Rooms[room.ID] = room
 		g.Available[room.ID] = true
 
@@ -85,8 +84,8 @@ func NewHandler(g *game.Game) *http.ServeMux {
 	handler.HandleFunc("/quick-play", func(w http.ResponseWriter, r *http.Request) {
 		quickPlay(g, w, r)
 	})
-	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
-		createRoom(g, w, r)
+	handler.HandleFunc("/create-private-room", func(w http.ResponseWriter, r *http.Request) {
+		createPrivateRoom(g, w, r)
 	})
 	handler.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
 		serveRoom(g, w, r)

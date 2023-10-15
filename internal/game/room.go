@@ -48,18 +48,20 @@ type Room struct {
 	Broadcast    chan Message
 	Join         chan *Player
 	Leave        chan *Player
+	IsPrivate    bool
 	pause        chan struct{}
 	done         chan struct{}
 	game         *Game
 }
 
-func NewRoom(g *Game) *Room {
+func NewRoom(g *Game, isPrivate bool) *Room {
 	room := Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
 		Broadcast: make(chan Message, 1),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
+		IsPrivate: isPrivate,
 		pause:     make(chan struct{}),
 		done:      make(chan struct{}),
 		game:      g,
@@ -157,7 +159,7 @@ func (r *Room) shouldEnd(scoredPlayer *Player) bool {
 func (r *Room) endRound(winner *Player) {
 	r.Status = finish
 
-  r.reset()
+	r.reset()
 
 	msg := Message{
 		Type: "finish",
