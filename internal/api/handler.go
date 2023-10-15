@@ -54,19 +54,23 @@ func serveRoom(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/room.html")
 }
 
-func quickJoin(g *game.Game, w http.ResponseWriter, r *http.Request) {
+func quickPlay(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	roomID, found := g.FindAvailableRoom()
-	if !found {
-		http.Error(w, "No rooms are currently available.", http.StatusNotFound)
-		return
-	}
-
 	newUrl := fmt.Sprintf("/rooms/%s", roomID)
+	if !found {
+		room := game.NewRoom(g)
+		g.Rooms[room.ID] = room
+		g.Available[room.ID] = true
+
+		newUrl = fmt.Sprintf("/rooms/%s", room.ID)
+
+		go room.Run()
+	}
 
 	http.Redirect(w, r, newUrl, http.StatusSeeOther)
 }
@@ -78,8 +82,8 @@ func NewHandler(g *game.Game) *http.ServeMux {
 	handler.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	handler.HandleFunc("/", serveHome)
-	handler.HandleFunc("/quick-join", func(w http.ResponseWriter, r *http.Request) {
-		quickJoin(g, w, r)
+	handler.HandleFunc("/quick-play", func(w http.ResponseWriter, r *http.Request) {
+		quickPlay(g, w, r)
 	})
 	handler.HandleFunc("/create-room", func(w http.ResponseWriter, r *http.Request) {
 		createRoom(g, w, r)
