@@ -7,12 +7,27 @@
   </head>
   <body>
     <div id="score">
-      <span id="left-player-score">0</span> : <span id="right-player-score">0</span>
+      <span id="left-player-score">0</span> :
+      <span id="right-player-score">0</span>
     </div>
+
     <div id="players">
       <div class="player-label" id="left-player">You</div>
       <div class="player-label" id="right-player">Opponent</div>
-    </div><canvas width="750" height="585" id="game"></canvas>
+    </div>
+
+    <div class="modal" id="myModal">
+      <div class="modal-content">
+        <p>Game Over</p>
+        <div class="modal-button-container">
+          <button id="exitButton">Exit</button>
+          <button id="replayButton">Replay</button>
+        </div>
+      </div>
+    </div>
+
+    <canvas width="750" height="585" id="game"></canvas>
+
     <div id="instructions">
       <div class="button-container">
         <div class="button">
@@ -33,6 +48,8 @@
         <div class="text">Start</div>
       </div>
     </div>
+
+    <script src="/static/js/modal.js"></script>
     <script>
       var conn;
       var id;
@@ -59,7 +76,7 @@
           }
           if (msg.type === "finish") {
             player = msg.data;
-            setTimeout(alertWinner, 100, player)
+            setTimeout(alertWinner, 100, player);
             return;
           }
           if (msg.type === "update") {
@@ -93,8 +110,12 @@
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
 
-        document.getElementById("left-player").innerHTML = seat ? "Opponent" : "You";
-        document.getElementById("right-player").innerHTML = seat ? "You" : "Opponent";
+        document.getElementById("left-player").innerHTML = seat
+          ? "Opponent"
+          : "You";
+        document.getElementById("right-player").innerHTML = seat
+          ? "You"
+          : "Opponent";
 
         draw();
       }
@@ -156,7 +177,7 @@
 
       const ball = {
         x: boardWidth / 2 - grid / 2,
-        y: boardHeight / 2 - grid /2,
+        y: boardHeight / 2 - grid / 2,
         dx: -ballSpeed,
         dy: 0,
         width: grid,
