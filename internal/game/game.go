@@ -9,7 +9,7 @@ import (
 )
 
 const (
-  maxScore = 1
+  maxScore = 5
 )
 
 type RoomID string
