@@ -70,7 +70,6 @@
           "wss://" + document.location.host + "/ws/" + roomId,
         );
         conn.onclose = function (evt) {
-          console.log("player left");
         };
         conn.onmessage = function (evt) {
           msg = JSON.parse(evt.data);
