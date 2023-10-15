@@ -1,0 +1,51 @@
+body {
+  background-color: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+}
+
+#canvas-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+canvas {
+  margin: 0 auto; /* Center the canvas horizontally */
+  display: block;
+  z-index: -1;
+}
+
+.button-container {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+form {
+  display: inline;
+}
+
+button[type="submit"] {
+  background-color: #333;
+  color: white;
+  padding: 10px 20px;
+  border: 2px solid #666;
+  border-radius: 5px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background-color: #555;
+}
+
+form + form {
+  margin-left: 20px;
+}
