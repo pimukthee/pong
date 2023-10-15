@@ -115,10 +115,10 @@ func (r *Room) updateState() {
 	defer ticker.Stop()
 
 	for {
-    if r.Status == ready || r.Status == pause {
-      <-r.pause 
-      r.Status = start
-    }
+		if r.Status == ready || r.Status == pause {
+			<-r.pause
+			r.Status = start
+		}
 		select {
 		case <-ticker.C:
 			if r.Status == start {
@@ -130,7 +130,7 @@ func (r *Room) updateState() {
 				if r.Ball.move() {
 					scoredPlayer = r.Ball.getScoredPlayer()
 					shouldEnd = r.shouldEnd(scoredPlayer)
-					r.reset(scoredPlayer)
+					r.resetAfterScore(scoredPlayer)
 				}
 
 				msg := Message{
@@ -157,9 +157,7 @@ func (r *Room) shouldEnd(scoredPlayer *Player) bool {
 func (r *Room) endRound(winner *Player) {
 	r.Status = finish
 
-	for i := range r.Players {
-		r.Players[i].reset()
-	}
+  r.reset()
 
 	msg := Message{
 		Type: "finish",
@@ -168,12 +166,21 @@ func (r *Room) endRound(winner *Player) {
 	r.Broadcast <- msg
 }
 
-func (r *Room) reset(scoredPlayer *Player) {
+func (r *Room) reset() {
+	for i := range r.Players {
+		if r.Players[i] != nil {
+			r.Players[i].reset()
+		}
+	}
+	r.Ball.reset(Seat(right))
+}
+
+func (r *Room) resetAfterScore(scoredPlayer *Player) {
 	r.Status = pause
 	for i := range r.Players {
 		r.Players[i].resetPosition()
 	}
-	r.Ball.reset(scoredPlayer)
+	r.Ball.reset(scoredPlayer.Seat)
 }
 
 func (r *Room) isEmpty() bool {
@@ -187,7 +194,6 @@ func (r *Room) addPlayer(p *Player) {
 	r.Players[i] = p
 
 	if r.PlayersCount == 2 {
-    r.reset(r.Players[1])
 		r.game.Available[r.ID] = false
 		r.Status = ready
 		r.Broadcast <- Message{
@@ -212,6 +218,8 @@ func (r *Room) removePlayer(p *Player) {
 	} else {
 		r.Players[1] = nil
 	}
+
+	r.reset()
 
 	r.Broadcast <- Message{
 		Type: "leave",

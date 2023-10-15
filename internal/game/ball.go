@@ -34,9 +34,9 @@ func NewBall(room *Room) *Ball {
 	}
 }
 
-func (ball *Ball) reset(scoredPlayer *Player) {
+func (ball *Ball) reset(currentDirection Seat) {
   dir := rightSpeed
-  if scoredPlayer.Seat == right {
+  if currentDirection == right {
     dir = leftSpeed
   }
 

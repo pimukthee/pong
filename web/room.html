@@ -69,8 +69,7 @@
         conn = new WebSocket(
           "wss://" + document.location.host + "/ws/" + roomId,
         );
-        conn.onclose = function (evt) {
-        };
+        conn.onclose = function (evt) {};
         conn.onmessage = function (evt) {
           msg = JSON.parse(evt.data);
 
@@ -81,6 +80,7 @@
           }
           if (msg.type == "leave") {
             alert("Opponent has left");
+            resetScore();
             resetBall(-1);
             document.getElementById("room-status").innerHTML = "Waiting";
             return;
