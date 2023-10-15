@@ -24,6 +24,14 @@
     </div>
   </body>
   <script>
+    const roomInput = document.getElementById("room-id-input");
+    const joinButton = document.getElementById("join-room");
+
+    joinButton.addEventListener("click", function () {
+      const roomId = roomInput.value;
+
+      window.location.href = `/rooms/${roomId}`;
+    });
     const canvas = document.getElementById("game");
     const context = canvas.getContext("2d");
     const boardHeight = canvas.height;
