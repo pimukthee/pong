@@ -113,10 +113,7 @@ func (p *Player) ReadAction() {
 		}
 
 		if p.Action.Start && (p.Room.Status == ready || p.Room.Status == pause) {
-			if p.Room.Status == ready {
-				p.Room.pause <- struct{}{}
-			}
-			p.Room.Status = start
+			p.Room.pause <- struct{}{}
 		}
 	}
 }

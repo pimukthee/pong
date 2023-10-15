@@ -114,9 +114,11 @@ func (r *Room) updateState() {
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
-	<-r.pause
-
 	for {
+    if r.Status == ready || r.Status == pause {
+      <-r.pause 
+      r.Status = start
+    }
 		select {
 		case <-ticker.C:
 			if r.Status == start {
@@ -185,6 +187,7 @@ func (r *Room) addPlayer(p *Player) {
 	r.Players[i] = p
 
 	if r.PlayersCount == 2 {
+    r.reset(r.Players[1])
 		r.game.Available[r.ID] = false
 		r.Status = ready
 		r.Broadcast <- Message{
