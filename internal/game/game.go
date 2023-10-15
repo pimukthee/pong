@@ -9,7 +9,7 @@ import (
 )
 
 const (
-  maxScore = 5
+  maxScore = 1
 )
 
 type RoomID string
@@ -26,7 +26,7 @@ var upgrader = websocket.Upgrader{
 
 type Message struct {
 	Type string `json:"type"`
-	Data any    `json:"data"`
+	Data any    `json:"data,omitempty"`
 }
 
 type InitMessage struct {

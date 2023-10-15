@@ -34,8 +34,8 @@ const (
 type Seat bool
 
 type gameState struct {
-	Player1      *Player `json:"player1"`
-	Player2      *Player `json:"player2"`
+	Player1      Player  `json:"player1"`
+	Player2      Player  `json:"player2"`
 	Ball         Ball    `json:"ball"`
 	ScoredPlayer *Player `json:"scoredPlayer"`
 }
@@ -57,7 +57,7 @@ func NewRoom() *Room {
 	room := Room{
 		ID:        RoomID(uuid.NewString()),
 		Status:    waiting,
-		Broadcast: make(chan Message),
+		Broadcast: make(chan Message, 1),
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
 		pause:     make(chan struct{}),
@@ -93,6 +93,9 @@ func (r *Room) Run(ctx context.Context) {
 		case message := <-r.Broadcast:
 			players := r.Players[:]
 			for i := range players {
+        if players[i] == nil {
+          continue
+        }
 				select {
 				case players[i].Send <- message:
 				default:
@@ -119,24 +122,23 @@ func (r *Room) updateState() {
 				r.Players[1].updatePosition()
 
 				var scoredPlayer *Player
-        var shouldEnd bool
+				var shouldEnd bool
 				if r.Ball.move() {
 					scoredPlayer = r.Ball.getScoredPlayer()
-          shouldEnd = r.shouldEnd(scoredPlayer)
+					shouldEnd = r.shouldEnd(scoredPlayer)
 					r.reset(scoredPlayer)
 				}
 
 				msg := Message{
 					Type: "update",
-					Data: gameState{Player1: r.Players[0], Player2: r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer},
+					Data: gameState{Player1: *r.Players[0], Player2: *r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer},
 				}
 
 				r.Broadcast <- msg
 
-        if shouldEnd {
-          r.endRound(scoredPlayer) 
-        }
-
+				if shouldEnd {
+					r.endRound(scoredPlayer)
+				}
 			}
 		case <-r.done:
 			return
@@ -145,23 +147,27 @@ func (r *Room) updateState() {
 }
 
 func (r *Room) shouldEnd(scoredPlayer *Player) bool {
-  return scoredPlayer.isMaxScoreReached()
-} 
+	return scoredPlayer.isMaxScoreReached()
+}
 
 func (r *Room) endRound(winner *Player) {
-  r.Status = finish
+	r.Status = finish
 
-  msg := Message {
-    Type: "finish",
-    Data: winner, 
-  }
-  r.Broadcast <-msg
+	for i := range r.Players {
+		r.Players[i].reset()
+	}
+
+	msg := Message{
+		Type: "finish",
+		Data: winner,
+	}
+	r.Broadcast <- msg
 }
 
 func (r *Room) reset(scoredPlayer *Player) {
 	r.Status = pause
 	for i := range r.Players {
-		r.Players[i].reset()
+		r.Players[i].resetPosition()
 	}
 	r.Ball.reset(scoredPlayer)
 }
@@ -178,6 +184,9 @@ func (r *Room) addPlayer(p *Player) {
 
 	if r.PlayersCount == 2 {
 		r.Status = ready
+		r.Broadcast <- Message{
+			Type: "ready",
+		}
 	}
 }
 
@@ -197,9 +206,10 @@ func (r *Room) removePlayer(p *Player) {
 	} else {
 		r.Players[1] = nil
 	}
-	if r.Status == ready {
-		r.Status = waiting
-	} else if r.Status == start {
-		r.Status = finish
-	}
+
+  r.Broadcast <- Message {
+    Type: "leave",
+  }
+
+  r.Status = waiting
 }

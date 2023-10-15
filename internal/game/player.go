@@ -18,9 +18,10 @@ const (
 )
 
 type Action struct {
-	Up    bool `json:"up"`
-	Down  bool `json:"down"`
-	Start bool `json:"start"`
+	Up     bool `json:"up"`
+	Down   bool `json:"down"`
+	Start  bool `json:"start"`
+	Replay bool `json:"replay"`
 }
 
 type PlayerID string
@@ -67,12 +68,17 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 }
 
 func (p *Player) reset() {
+	p.resetPosition()
+	p.Score = 0
+}
+
+func (p *Player) resetPosition() {
 	p.Y = boardHeight/2 - playerHeight/2
 	p.Dy = 0
 }
 
 func (p *Player) isMaxScoreReached() bool {
-  return p.Score >= maxScore
+	return p.Score >= maxScore
 }
 
 func (p *Player) ReadAction() {
@@ -95,6 +101,15 @@ func (p *Player) ReadAction() {
 				log.Printf("error: %v", err)
 			}
 			break
+		}
+
+		if p.Action.Replay && (p.Room.Status == ready || p.Room.Status == finish) {
+			p.Room.Status = pause
+			p.Room.Broadcast <- Message{
+				Type: "replay",
+			}
+
+			continue
 		}
 
 		if p.Action.Start && (p.Room.Status == ready || p.Room.Status == pause) {

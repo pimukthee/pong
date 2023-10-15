@@ -13,12 +13,13 @@
 
     <div id="players">
       <div class="player-label" id="left-player">You</div>
+      <div class="player-label" id="room-status">Waiting</div>
       <div class="player-label" id="right-player">Opponent</div>
     </div>
 
     <div class="modal" id="myModal">
       <div class="modal-content">
-        <p>Game Over</p>
+        <p id="winner">Game Over</p>
         <div class="modal-button-container">
           <button id="exitButton">Exit</button>
           <button id="replayButton">Replay</button>
@@ -74,12 +75,28 @@
 
             return;
           }
+          if (msg.type == "leave") {
+            alert("Opponent has left");
+            document.getElementById("room-status").innerHTML = "Waiting";
+            return;
+          }
+          if (msg.type == "ready") {
+            alert("Player has joined. Press Space bar to start");
+            document.getElementById("room-status").innerHTML = "Ready";
+            return;
+          }
           if (msg.type === "finish") {
             player = msg.data;
-            setTimeout(alertWinner, 100, player);
+            setTimeout(showGameOverModal, 100, player, seat);
+            return;
+          }
+          if (msg.type == "replay") {
+            hideGameOverModal();
+            resetScore();
             return;
           }
           if (msg.type === "update") {
+            document.getElementById("room-status").innerHTML = "Playing";
             const scoredPlayer = msg.data.scoredPlayer;
             if (scoredPlayer) {
               updateScore(msg.data);
@@ -93,14 +110,6 @@
         };
       } else {
         alert("Your browser does not support WebSockets.");
-      }
-
-      function alertWinner(player) {
-        if (player.seat) {
-          alert("Player 2 won");
-        } else {
-          alert("Player 1 won");
-        }
       }
 
       function initGame(data) {
@@ -126,6 +135,11 @@
 
         document.getElementById("left-player-score").innerHTML = player1.score;
         document.getElementById("right-player-score").innerHTML = player2.score;
+      }
+
+      function resetScore() {
+        document.getElementById("left-player-score").innerHTML = 0;
+        document.getElementById("right-player-score").innerHTML = 0;
       }
 
       function resetGame(scoredPlayer) {
@@ -398,6 +412,7 @@
             up: playerPaddle.acceleratingUp,
             down: playerPaddle.acceleratingDown,
             start: playerPaddle.start,
+            replay: false,
           }),
         );
       }

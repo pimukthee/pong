@@ -7,17 +7,29 @@ var replayButton = document.getElementById("replayButton");
 
 // When the game is over, display the modal
 // For example, you can use a function like showGameOverModal() to trigger this
-function showGameOverModal() {
+function showGameOverModal(winner, playerSeat) {
   modal.style.display = "flex";
+  document.getElementById("winner").innerHTML = winner.seat == playerSeat
+    ? "You win"
+    : "You lose";
 }
 
+function hideGameOverModal() {
+  modal.style.display = "none";
+}
 // Add event listeners to the buttons
 exitButton.addEventListener("click", function () {
   modal.style.display = "none";
+  window.location = "/";
   // Add code to exit the game or perform other actions
 });
 
 replayButton.addEventListener("click", function () {
   modal.style.display = "none";
-  // Add code to replay the game or perform other actions
+  conn.send(JSON.stringify({
+    up: false,
+    down: false,
+    start: false,
+    replay: true,
+  }));
 });
