@@ -62,7 +62,7 @@
         pathnames = window.location.pathname.split("/");
         roomId = pathnames.pop() || pathnames.pop();
         conn = new WebSocket(
-          "ws://" + document.location.host + "/ws/" + roomId,
+          "wss://" + document.location.host + "/ws/" + roomId,
         );
         conn.onclose = function (evt) {
           console.log("player left");
