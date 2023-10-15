@@ -11,6 +11,8 @@
       <span id="right-player-score">0</span>
     </div>
 
+    <div class="room-id-container">RoomID: <span id="room-id"></span></div>
+
     <div id="players">
       <div class="player-label" id="left-player">You</div>
       <div class="player-label" id="room-status">Waiting</div>
@@ -44,7 +46,7 @@
       </div>
       <div class="button-container">
         <div class="button">
-          <div class="text">Space bar</div>
+          <div class="text">Space</div>
         </div>
         <div class="text">Start</div>
       </div>
@@ -58,9 +60,12 @@
       var playerPaddle;
       var opponentPaddle;
 
+      const pathnames = window.location.pathname.split("/");
+      const roomId = pathnames.pop() || pathnames.pop();
+
+      document.getElementById("room-id").innerHTML = roomId;
+
       if (window["WebSocket"]) {
-        pathnames = window.location.pathname.split("/");
-        roomId = pathnames.pop() || pathnames.pop();
         conn = new WebSocket(
           "wss://" + document.location.host + "/ws/" + roomId,
         );
