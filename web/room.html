@@ -6,11 +6,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/main.css" />
   </head>
   <body>
-    <div id="score">
-      <span id="left-player-score">0</span> :
-      <span id="right-player-score">0</span>
-    </div>
-
     <div class="room-id-container">RoomID: <span id="room-id"></span></div>
 
     <div id="players">
@@ -29,7 +24,17 @@
       </div>
     </div>
 
-    <canvas width="750" height="585" id="game"></canvas>
+    <div class="game-container">
+      <div class="score">
+        <span id="left-player-score">0</span>
+      </div>
+
+      <canvas width="750" height="585" id="game"></canvas>
+
+      <div class="score">
+        <span id="right-player-score">0</span>
+      </div>
+    </div>
 
     <div id="instructions">
       <div class="button-container">
@@ -59,6 +64,7 @@
       var seat; // false is left true is right
       var playerPaddle;
       var opponentPaddle;
+      var pause = true;
 
       const pathnames = window.location.pathname.split("/");
       const roomId = pathnames.pop() || pathnames.pop();
@@ -87,17 +93,20 @@
           }
           if (msg.type == "ready") {
             alert("Player has joined. Press Space bar to start");
+            resetBall(1);
             document.getElementById("room-status").innerHTML = "Ready";
             return;
           }
           if (msg.type === "finish") {
             player = msg.data;
             setTimeout(showGameOverModal, 100, player, seat);
+            resetBall(1);
             return;
           }
           if (msg.type == "replay") {
             hideGameOverModal();
             resetScore();
+            resetBall(1);
             return;
           }
           if (msg.type === "update") {
@@ -120,6 +129,8 @@
       function initGame(data) {
         id = data.id;
         seat = data.seat;
+
+        resetBall(1);
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
@@ -226,7 +237,9 @@
       function draw() {
         context.clearRect(0, 0, boardWidth, boardHeight);
 
-        // moveBall();
+        if (!pause) {
+          moveBall();
+        }
         updatePlayerPaddleSpeed();
         movePlayerPaddle();
 
@@ -302,9 +315,10 @@
       }
 
       function resetBall(newDir) {
+        pause = true;
         ball.x = boardWidth / 2 - ball.width / 2;
         ball.y = boardHeight / 2 - ball.height / 2;
-        ball.dy = 0;
+        ball.dy = 3 * newDir;
         ball.dx = ballSpeed * newDir;
       }
 
@@ -351,6 +365,7 @@
 
       document.addEventListener("keydown", function (e) {
         if (e.which == Keys.Spacebar) {
+          pause = false;
           playerPaddle.start = true;
           sendAction();
         } else if (e.which === Keys.Up) {

@@ -74,11 +74,21 @@ func quickPlay(g *game.Game, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, newUrl, http.StatusSeeOther)
 }
 
+func noCache(h http.Handler) http.Handler {
+  fn := func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Cache-Control", "no-cache, private, max-age=0")
+    
+    h.ServeHTTP(w, r)
+  }
+
+  return http.HandlerFunc(fn)
+}
+
 func NewHandler(g *game.Game) *http.ServeMux {
 	handler := http.NewServeMux()
 
 	fs := http.FileServer(http.Dir("./web/"))
-	handler.Handle("/static/", http.StripPrefix("/static/", fs))
+	handler.Handle("/static/", noCache(http.StripPrefix("/static/", fs)))
 
 	handler.HandleFunc("/", serveHome)
 	handler.HandleFunc("/quick-play", func(w http.ResponseWriter, r *http.Request) {
