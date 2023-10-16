@@ -11,15 +11,13 @@ RUN CGO_ENABLED=0 go build -o pong ./cmd/main.go
 RUN chmod +x /app/pong
 
 
-FROM alpine:latest
+FROM gcr.io/distroless/static-debian11:latest
 
-RUN mkdir /app
+WORKDIR /app
 
 COPY --from=builder /app/pong /app
 
 COPY --from=builder /app/web /app/web
-
-WORKDIR /app
 
 EXPOSE 8080
 
