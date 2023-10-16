@@ -13,20 +13,21 @@ const (
 )
 
 type Ball struct {
-	room   *Room `json:"-"`
-	Y      int   `json:"y"`
-	X      int   `json:"x"`
-	Dy     int   `json:"dy"`
-	Dx     int   `json:"dx"`
-	width  int   `json:"-"`
-	height int   `json:"-"`
+	room     *Room `json:"-"`
+	Y        int   `json:"y"`
+	X        int   `json:"x"`
+	Dy       int   `json:"dy"`
+	Dx       int   `json:"dx"`
+	IsMoving bool  `json:"isMoving"`
+	width    int   `json:"-"`
+	height   int   `json:"-"`
 }
 
 func NewBall(room *Room) *Ball {
 	return &Ball{
 		room:   room,
-		X:      boardWidth / 2 - grid / 2,
-		Y:      boardHeight / 2 - grid / 2,
+		X:      boardWidth/2 - grid/2,
+		Y:      boardHeight/2 - grid/2,
 		Dx:     -ballSpeed,
 		Dy:     0,
 		width:  grid,
@@ -35,18 +36,33 @@ func NewBall(room *Room) *Ball {
 }
 
 func (ball *Ball) reset(currentDirection Seat) {
-  dir := rightSpeed
-  if currentDirection == right {
-    dir = leftSpeed
-  }
+	ball.IsMoving = false
 
-	ball.X = boardWidth / 2 - ball.width / 2
-	ball.Y = boardHeight / 2 - ball.height / 2
-	ball.Dx = ballSpeed * dir
+	if currentDirection == right {
+		player := ball.room.Players[0]
+		ball.X = player.X + player.width + 1
+		ball.Y = player.Y + player.height/2 - ball.height/2
+		ball.Dx = ballSpeed
+		ball.Dy = 0
+
+		return
+	}
+
+	player := ball.room.Players[1]
+	ball.X = player.X - ball.width - 1
+	ball.Y = player.Y + player.height/2 - ball.height/2
+	ball.Dx = -ballSpeed
 	ball.Dy = 0
 }
 
 func (ball *Ball) move() bool {
+	room := ball.room
+	if !ball.IsMoving {
+		ball.Dy = room.Players[room.Turn].Dy
+		ball.Y += ball.Dy
+		return false
+	}
+
 	newY := ball.Y + ball.Dy
 	newX := ball.X + ball.Dx
 
@@ -93,15 +109,15 @@ func (ball *Ball) move() bool {
 }
 
 func (ball *Ball) getScoredPlayer() *Player {
-  newX := ball.X + ball.Dx
-  if newX < 0 {
-    return ball.room.Players[1]
-  }
-  if newX > boardWidth - ball.width {
-    return ball.room.Players[0]
-  }
+	newX := ball.X + ball.Dx
+	if newX < 0 {
+		return ball.room.Players[1]
+	}
+	if newX > boardWidth-ball.width {
+		return ball.room.Players[0]
+	}
 
-  return nil
+	return nil
 }
 
 func (ball *Ball) adjustSpeedAfterCollideWithPaddle(player *Player) {

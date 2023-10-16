@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,8 +32,8 @@ const (
 )
 
 type command struct {
-	cmd  string
-	data any
+	operation string
+	data      any
 }
 
 type Seat bool
@@ -54,6 +55,10 @@ type Room struct {
 	Join         chan *Player
 	Leave        chan *Player
 	IsPrivate    bool
+	Turn         int
+	mutex        sync.Mutex
+	stateCh      chan command
+	ready        chan struct{}
 	pause        chan struct{}
 	done         chan struct{}
 	game         *Game
@@ -67,6 +72,8 @@ func NewRoom(g *Game, isPrivate bool) *Room {
 		Join:      make(chan *Player),
 		Leave:     make(chan *Player),
 		IsPrivate: isPrivate,
+		stateCh:   make(chan command),
+		ready:     make(chan struct{}),
 		pause:     make(chan struct{}),
 		done:      make(chan struct{}),
 		game:      g,
@@ -87,16 +94,15 @@ func (r *Room) Run() {
 		fmt.Println("clear room")
 	}()
 
-	stateCh := make(chan command)
-	go r.updateState()
-	go r.stateManager(stateCh)
+	go r.stateManager()
+	go r.statusManager()
 
 	for loop := true; loop; {
 		select {
 		case player := <-r.Join:
-			stateCh <- command{cmd: "add player", data: player}
+			r.stateCh <- command{operation: "add player", data: player}
 		case player := <-r.Leave:
-			stateCh <- command{cmd: "remove player", data: player}
+			r.stateCh <- command{operation: "remove player", data: player}
 			loop = !r.isEmpty()
 
 		case message := <-r.Broadcast:
@@ -108,8 +114,7 @@ func (r *Room) Run() {
 				select {
 				case players[i].Send <- message:
 				default:
-					close(players[i].Send)
-					players[i] = nil
+					r.stateCh <- command{operation: "remove player", data: players[i]}
 				}
 			}
 		}
@@ -117,60 +122,74 @@ func (r *Room) Run() {
 	r.done <- struct{}{}
 }
 
-func (r *Room) stateManager(stateCh chan command) {
-	for cmd := range stateCh {
-		c := cmd.cmd
+func (r *Room) statusManager() {
+	for cmd := range r.stateCh {
+		c := cmd.operation
 		data := cmd.data
 
 		switch c {
 		case "add player":
 			r.addPlayer(data.(*Player))
-    case "remove player":
-      player := data.(*Player)
+		case "remove player":
+			player := data.(*Player)
 			r.removePlayer(player)
 			close(player.Send)
+		case "update status":
+			r.Status = data.(int)
 		}
 	}
 }
 
-func (r *Room) updateState() {
+func (r *Room) stateManager() {
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
 	for {
-		if r.Status == ready || r.Status == pause {
-			<-r.pause
-			r.Status = start
+		if r.Status == waiting {
+			<-r.ready
+			r.initRoom()
+			r.stateCh <- command{operation: "update status", data: pause}
 		}
 		select {
 		case <-ticker.C:
-			if r.Status == start {
-				r.Players[0].updatePosition()
-				r.Players[1].updatePosition()
-
-				var scoredPlayer *Player
-				var shouldEnd bool
-				if r.Ball.move() {
-					scoredPlayer = r.Ball.getScoredPlayer()
-					shouldEnd = r.shouldEnd(scoredPlayer)
-					r.resetAfterScore(scoredPlayer)
-				}
-
-				msg := Message{
-					Type: "update",
-					Data: gameState{Player1: *r.Players[0], Player2: *r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer},
-				}
-
-				r.Broadcast <- msg
-
-				if shouldEnd {
-					r.endRound(scoredPlayer)
-				}
+			r.mutex.Lock()
+			if r.Status == waiting {
+				r.mutex.Unlock()
+				continue
 			}
+
+			r.Players[0].updatePosition()
+			r.Players[1].updatePosition()
+			r.mutex.Unlock()
+
+			var scoredPlayer *Player
+			var shouldEnd bool
+			if r.Ball.move() {
+				scoredPlayer = r.Ball.getScoredPlayer()
+				shouldEnd = r.shouldEnd(scoredPlayer)
+				r.resetAfterScore(scoredPlayer)
+			}
+
+			msg := Message{
+				Type: "update",
+				Data: gameState{Player1: *r.Players[0], Player2: *r.Players[1], Ball: *r.Ball, ScoredPlayer: scoredPlayer},
+			}
+
+			r.Broadcast <- msg
+
+			if shouldEnd {
+				r.endRound(scoredPlayer)
+			}
+		case <-r.pause:
+			r.Ball.IsMoving = true
 		case <-r.done:
 			return
 		}
 	}
+}
+
+func (r *Room) initRoom() {
+	r.reset()
 }
 
 func (r *Room) shouldEnd(scoredPlayer *Player) bool {
@@ -178,7 +197,7 @@ func (r *Room) shouldEnd(scoredPlayer *Player) bool {
 }
 
 func (r *Room) endRound(winner *Player) {
-	r.Status = finish
+	r.stateCh <- command{operation: "update status", data: finish}
 
 	r.reset()
 
@@ -195,13 +214,20 @@ func (r *Room) reset() {
 			r.Players[i].reset()
 		}
 	}
+	r.Turn = 0
 	r.Ball.reset(Seat(right))
 }
 
 func (r *Room) resetAfterScore(scoredPlayer *Player) {
-	r.Status = pause
+	r.stateCh <- command{operation: "update status", data: pause}
+
 	for i := range r.Players {
 		r.Players[i].resetPosition()
+	}
+
+	r.Turn = 1
+	if scoredPlayer.Seat == right {
+		r.Turn = 0
 	}
 	r.Ball.reset(scoredPlayer.Seat)
 }
@@ -219,6 +245,7 @@ func (r *Room) addPlayer(p *Player) {
 	if r.PlayersCount == 2 {
 		r.game.Available[r.ID] = false
 		r.Status = ready
+		r.ready <- struct{}{}
 		r.Broadcast <- Message{
 			Type: "ready",
 		}
@@ -234,6 +261,9 @@ func (r *Room) getAvailableSeat() int {
 }
 
 func (r *Room) removePlayer(p *Player) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	r.PlayersCount -= 1
 
 	if p == r.Players[0] {
@@ -248,7 +278,9 @@ func (r *Room) removePlayer(p *Player) {
 		Type: "leave",
 	}
 
-	r.game.Available[r.ID] = true
+	if !r.IsPrivate {
+		r.game.Available[r.ID] = true
+	}
 
 	r.Status = waiting
 }

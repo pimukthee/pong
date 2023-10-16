@@ -103,8 +103,8 @@ func (p *Player) ReadAction() {
 			break
 		}
 
-		if p.Action.Replay && (p.Room.Status == ready || p.Room.Status == finish) {
-			p.Room.Status = pause
+		if p.Action.Replay && p.Room.Status == finish {
+      p.Room.stateCh <- command{operation: "update status", data: pause}
 			p.Room.Broadcast <- Message{
 				Type: "replay",
 			}
@@ -112,7 +112,7 @@ func (p *Player) ReadAction() {
 			continue
 		}
 
-		if p.Action.Start && (p.Room.Status == ready || p.Room.Status == pause) {
+		if p.Action.Start && p.Room.Status == pause {
 			p.Room.pause <- struct{}{}
 		}
 	}
