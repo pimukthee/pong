@@ -40,16 +40,25 @@ func (ball *Ball) reset(currentDirection Seat) {
 
 	if currentDirection == right {
 		player := ball.room.Players[0]
-		ball.X = player.X + player.width + 1
-		ball.Y = player.Y + player.height/2 - ball.height/2
-		ball.Dx = ballSpeed
-		ball.Dy = 0
+    ball.stickWithPlayer(player)
 
 		return
 	}
 
 	player := ball.room.Players[1]
-	ball.X = player.X - ball.width - 1
+  ball.stickWithPlayer(player)
+}
+
+func (ball *Ball) stickWithPlayer(player *Player) {
+	if player.Seat == right {
+		ball.X = player.X - ball.width - 1
+		ball.Y = player.Y + player.height/2 - ball.height/2
+		ball.Dx = ballSpeed
+		ball.Dy = 0
+		return
+	}
+
+	ball.X = player.X + player.width + 1
 	ball.Y = player.Y + player.height/2 - ball.height/2
 	ball.Dx = -ballSpeed
 	ball.Dy = 0
@@ -59,11 +68,9 @@ func (ball *Ball) move() bool {
 	room := ball.room
 	if !ball.IsMoving {
 		if room.Players[room.turn] == nil {
-			ball.Dy = 0
-		} else {
-			ball.Dy = room.Players[room.turn].Dy
+			return false
 		}
-		ball.Y += ball.Dy
+    ball.stickWithPlayer(room.Players[room.turn])
 		return false
 	}
 

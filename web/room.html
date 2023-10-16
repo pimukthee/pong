@@ -89,6 +89,7 @@
             alert("Opponent has left");
             resetScore();
             resetBall(-1);
+            turn = 0;
             document.getElementById("room-status").innerHTML = "Waiting";
             return;
           }
@@ -187,6 +188,10 @@
         ball.dy = state.ball.dy;
         ball.dx = state.ball.dx;
 
+        if (state.ball.isMoving) {
+          pause = false
+        }
+
         playerPaddle = seat ? rightPaddle : leftPaddle;
         opponentPaddle = seat ? leftPaddle : rightPaddle;
       }
@@ -240,11 +245,9 @@
       function draw() {
         context.clearRect(0, 0, boardWidth, boardHeight);
 
-        if (!pause) {
-          moveBall();
-        }
         updatePlayerPaddleSpeed();
         movePlayerPaddle();
+        moveBall();
 
         context.fillStyle = "white";
         context.fillRect(ball.x, ball.y, ball.width, ball.height);
@@ -272,6 +275,16 @@
       }
 
       function moveBall() {
+        if (pause) {
+          if (turn == 1) {
+            ball.y = rightPaddle.y + rightPaddle.height / 2 - ball.height / 2;
+            ball.x = rightPaddle.x - ball.width - 1;
+          } else {
+            ball.y = leftPaddle.y + leftPaddle.height / 2 - ball.height / 2;
+            ball.x = leftPaddle.x + ball.width + 1;
+          }
+          return;
+        }
         const newY = ball.y + ball.dy;
         const newX = ball.x + ball.dx;
 
@@ -367,8 +380,10 @@
       }
 
       document.addEventListener("keydown", function (e) {
-        if (e.which == Keys.Spacebar && ((turn == 0 && !seat) || (turn == 1 && seat))) {
-          console.log("sss")
+        if (
+          e.which == Keys.Spacebar &&
+          ((turn == 0 && !seat) || (turn == 1 && seat))
+        ) {
           pause = false;
           playerPaddle.start = true;
           sendAction();
