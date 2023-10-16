@@ -64,6 +64,7 @@
       var seat; // false is left true is right
       var playerPaddle;
       var opponentPaddle;
+      var turn = 0;
       var pause = true;
 
       const pathnames = window.location.pathname.split("/");
@@ -160,7 +161,9 @@
 
       function resetGame(scoredPlayer) {
         let dir = 1;
+        turn = 1;
         if (scoredPlayer.seat) {
+          turn = 0;
           dir = -1;
         }
 
@@ -364,7 +367,8 @@
       }
 
       document.addEventListener("keydown", function (e) {
-        if (e.which == Keys.Spacebar) {
+        if (e.which == Keys.Spacebar && ((turn == 0 && !seat) || (turn == 1 && seat))) {
+          console.log("sss")
           pause = false;
           playerPaddle.start = true;
           sendAction();

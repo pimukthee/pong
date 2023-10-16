@@ -58,7 +58,11 @@ func (ball *Ball) reset(currentDirection Seat) {
 func (ball *Ball) move() bool {
 	room := ball.room
 	if !ball.IsMoving {
-		ball.Dy = room.Players[room.Turn].Dy
+		if room.Players[room.turn] == nil {
+			ball.Dy = 0
+		} else {
+			ball.Dy = room.Players[room.turn].Dy
+		}
 		ball.Y += ball.Dy
 		return false
 	}

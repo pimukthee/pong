@@ -51,7 +51,7 @@ func NewPlayer(room *Room, conn *websocket.Conn) *Player {
 		ID:     PlayerID(uuid.NewString()),
 		Room:   room,
 		Conn:   conn,
-		Send:   make(chan Message, 1),
+		Send:   make(chan Message, 2),
 		Seat:   seat,
 		Y:      boardHeight/2 - playerHeight/2,
 		width:  grid,
@@ -96,7 +96,7 @@ func (p *Player) ReadAction() {
 	for {
 		err := p.Conn.ReadJSON(&p.Action)
 		if err != nil {
-			log.Println(err)
+      log.Println(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
@@ -104,7 +104,7 @@ func (p *Player) ReadAction() {
 		}
 
 		if p.Action.Replay && p.Room.Status == finish {
-      p.Room.stateCh <- command{operation: "update status", data: pause}
+			p.Room.stateCh <- command{operation: "update status", data: pause}
 			p.Room.Broadcast <- Message{
 				Type: "replay",
 			}
@@ -112,7 +112,7 @@ func (p *Player) ReadAction() {
 			continue
 		}
 
-		if p.Action.Start && p.Room.Status == pause {
+		if p.Action.Start && p.Room.Status == pause && p.canServe() {
 			p.Room.pause <- struct{}{}
 		}
 	}
@@ -149,6 +149,15 @@ func (p *Player) WritePump() {
 			}
 		}
 	}
+}
+
+func (p *Player) canServe() bool {
+	if p.Room.Players[p.Room.turn] == nil {
+		return false
+	}
+	turnPlayer := p.Room.Players[p.Room.turn]
+
+	return p == turnPlayer
 }
 
 func (p *Player) updatePosition() {

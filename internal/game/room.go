@@ -55,12 +55,12 @@ type Room struct {
 	Join         chan *Player
 	Leave        chan *Player
 	IsPrivate    bool
-	Turn         int
+	turn         int
 	mutex        sync.Mutex
 	stateCh      chan command
 	ready        chan struct{}
 	pause        chan struct{}
-	done         chan struct{}
+	aborts       [2]chan struct{}
 	game         *Game
 }
 
@@ -75,7 +75,6 @@ func NewRoom(g *Game, isPrivate bool) *Room {
 		stateCh:   make(chan command),
 		ready:     make(chan struct{}),
 		pause:     make(chan struct{}),
-		done:      make(chan struct{}),
 		game:      g,
 	}
 	room.Ball = NewBall(&room)
@@ -94,6 +93,10 @@ func (r *Room) Run() {
 		fmt.Println("clear room")
 	}()
 
+	for i := 0; i < 2; i++ {
+		r.aborts[i] = make(chan struct{})
+	}
+
 	go r.stateManager()
 	go r.statusManager()
 
@@ -101,9 +104,9 @@ func (r *Room) Run() {
 		select {
 		case player := <-r.Join:
 			r.stateCh <- command{operation: "add player", data: player}
+
 		case player := <-r.Leave:
 			r.stateCh <- command{operation: "remove player", data: player}
-			loop = !r.isEmpty()
 
 		case message := <-r.Broadcast:
 			players := r.Players[:]
@@ -117,9 +120,11 @@ func (r *Room) Run() {
 					r.stateCh <- command{operation: "remove player", data: players[i]}
 				}
 			}
+
+		case <-r.aborts[0]:
+			loop = false
 		}
 	}
-	r.done <- struct{}{}
 }
 
 func (r *Room) statusManager() {
@@ -134,6 +139,11 @@ func (r *Room) statusManager() {
 			player := data.(*Player)
 			r.removePlayer(player)
 			close(player.Send)
+			if r.isEmpty() {
+				r.aborts[0] <- struct{}{}
+        r.aborts[1] <- struct{}{}
+				return
+			}
 		case "update status":
 			r.Status = data.(int)
 		}
@@ -142,13 +152,17 @@ func (r *Room) statusManager() {
 
 func (r *Room) stateManager() {
 	ticker := time.NewTicker(tickInterval)
-	defer ticker.Stop()
+	defer ticker.Stop() 
 
 	for {
 		if r.Status == waiting {
-			<-r.ready
-			r.initRoom()
-			r.stateCh <- command{operation: "update status", data: pause}
+			select {
+			case <-r.ready:
+				r.initRoom()
+				r.stateCh <- command{operation: "update status", data: pause}
+			case <-r.aborts[1]:
+				return
+			}
 		}
 		select {
 		case <-ticker.C:
@@ -160,7 +174,6 @@ func (r *Room) stateManager() {
 
 			r.Players[0].updatePosition()
 			r.Players[1].updatePosition()
-			r.mutex.Unlock()
 
 			var scoredPlayer *Player
 			var shouldEnd bool
@@ -180,9 +193,10 @@ func (r *Room) stateManager() {
 			if shouldEnd {
 				r.endRound(scoredPlayer)
 			}
+			r.mutex.Unlock()
 		case <-r.pause:
 			r.Ball.IsMoving = true
-		case <-r.done:
+		case <-r.aborts[1]:
 			return
 		}
 	}
@@ -214,7 +228,7 @@ func (r *Room) reset() {
 			r.Players[i].reset()
 		}
 	}
-	r.Turn = 0
+	r.turn = 0
 	r.Ball.reset(Seat(right))
 }
 
@@ -225,9 +239,9 @@ func (r *Room) resetAfterScore(scoredPlayer *Player) {
 		r.Players[i].resetPosition()
 	}
 
-	r.Turn = 1
+	r.turn = 1
 	if scoredPlayer.Seat == right {
-		r.Turn = 0
+		r.turn = 0
 	}
 	r.Ball.reset(scoredPlayer.Seat)
 }
@@ -272,14 +286,14 @@ func (r *Room) removePlayer(p *Player) {
 		r.Players[1] = nil
 	}
 
-	r.reset()
+	if r.PlayersCount > 0 {
+		if !r.IsPrivate {
+			r.game.Available[r.ID] = true
+		}
+	}
 
 	r.Broadcast <- Message{
 		Type: "leave",
-	}
-
-	if !r.IsPrivate {
-		r.game.Available[r.ID] = true
 	}
 
 	r.Status = waiting
