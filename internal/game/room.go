@@ -30,6 +30,11 @@ const (
 	right = Seat(true)
 )
 
+type command struct {
+	cmd  string
+	data any
+}
+
 type Seat bool
 
 type gameState struct {
@@ -82,16 +87,16 @@ func (r *Room) Run() {
 		fmt.Println("clear room")
 	}()
 
+	stateCh := make(chan command)
 	go r.updateState()
+	go r.stateManager(stateCh)
 
 	for loop := true; loop; {
 		select {
 		case player := <-r.Join:
-			r.addPlayer(player)
-
+			stateCh <- command{cmd: "add player", data: player}
 		case player := <-r.Leave:
-			r.removePlayer(player)
-			close(player.Send)
+			stateCh <- command{cmd: "remove player", data: player}
 			loop = !r.isEmpty()
 
 		case message := <-r.Broadcast:
@@ -110,6 +115,22 @@ func (r *Room) Run() {
 		}
 	}
 	r.done <- struct{}{}
+}
+
+func (r *Room) stateManager(stateCh chan command) {
+	for cmd := range stateCh {
+		c := cmd.cmd
+		data := cmd.data
+
+		switch c {
+		case "add player":
+			r.addPlayer(data.(*Player))
+    case "remove player":
+      player := data.(*Player)
+			r.removePlayer(player)
+			close(player.Send)
+		}
+	}
 }
 
 func (r *Room) updateState() {
