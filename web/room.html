@@ -3,6 +3,12 @@
   <head>
     <title>Pong</title>
     <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" type="text/css" href="/static/css/main.css" />
   </head>
   <body>
@@ -189,7 +195,7 @@
         ball.dx = state.ball.dx;
 
         if (state.ball.isMoving) {
-          pause = false
+          pause = false;
         }
 
         playerPaddle = seat ? rightPaddle : leftPaddle;
